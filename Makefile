@@ -6,7 +6,7 @@ APP_PATH := $(DD)/Build/Products/$(CONFIG)/$(APP).app
 XCB      := xcodebuild -project $(APP).xcodeproj -scheme $(SCHEME) -destination 'platform=macOS' -derivedDataPath $(DD)
 PKG      := Packages/RepoBarKit
 
-.PHONY: generate spec build run stop test test-engine test-app screenshots open logs clean release release-dry help
+.PHONY: generate spec build run stop test test-engine test-app screenshots open logs clean release release-dry sparkle-key-export help
 
 help:                ## Show targets
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  %-12s %s\n", $$1, $$2}'
@@ -53,6 +53,12 @@ clean:               ## Remove build output and generated project files
 release:             ## Publish a release: make release VERSION=1.2.3 [NOTES=notes.md] [FLAGS=--draft]
 	@test -n "$(VERSION)" || (echo "usage: make release VERSION=1.2.3 [NOTES=notes.md] [FLAGS=...]"; exit 2)
 	./Scripts/release.sh $(VERSION) $(if $(NOTES),--notes $(NOTES)) $(FLAGS)
+
+sparkle-key-export:  ## Export the Sparkle EdDSA private key: make sparkle-key-export FILE=~/Desktop/repobar-sparkle-key.txt
+	@test -n "$(FILE)" || (echo "usage: make sparkle-key-export FILE=<path>"; exit 2)
+	@BIN=$$(find build/DerivedData/SourcePackages/artifacts -type f -name generate_keys 2>/dev/null | head -1); \
+	  test -n "$$BIN" || (echo "Sparkle tools not found; run make build first"; exit 1); \
+	  "$$BIN" -x "$(FILE)" && chmod 600 "$(FILE)" && echo "Private key written to $(FILE) - store it in a password manager, never in git."
 
 release-dry:         ## Build the release artifacts into dist/ without touching git or GitHub
 	@test -n "$(VERSION)" || (echo "usage: make release-dry VERSION=1.2.3"; exit 2)
