@@ -154,23 +154,37 @@ struct ScreenshotScene {
             ("Count", "The number of repositories (or commits) with new commits.", { var s = base; s.style = .count; return s }()),
             ("Icon only", "Just the glyph, with an accent dot when something is new.", { var s = base; s.style = .iconOnly; return s }()),
         ]
-        return VStack(alignment: .leading, spacing: 18) {
+        return VStack(alignment: .leading, spacing: 16) {
+            HStack(spacing: 16) {
+                Color.clear.frame(width: 240, height: 1)
+                Text("Light menu bar").frame(width: 300)
+                Text("Dark menu bar").frame(width: 300)
+            }
+            .font(.system(size: 11, weight: .semibold))
+            .foregroundStyle(.secondary)
+
             ForEach(Array(variants.enumerated()), id: \.offset) { _, variant in
-                HStack(alignment: .center, spacing: 18) {
+                HStack(alignment: .center, spacing: 16) {
                     VStack(alignment: .leading, spacing: 3) {
                         Text(variant.0).font(.system(size: 15, weight: .semibold))
                         Text(variant.1).font(.system(size: 12)).foregroundStyle(.secondary)
                     }
-                    .frame(width: 250, alignment: .leading)
-                    MenuBarStrip(layout: StatusItemLayout.make(from: variant.2), scheme: scheme, highlighted: false, width: 360, showsAppMenu: false)
-                        .clipShape(RoundedRectangle(cornerRadius: 8))
-                        .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(Color.primary.opacity(0.12)))
+                    .frame(width: 240, alignment: .leading)
+                    strip(for: variant.2, scheme: .light)
+                    strip(for: variant.2, scheme: .dark)
                 }
             }
         }
         .padding(32)
         .background(Self.canvas(scheme))
         .environment(\.colorScheme, scheme)
+    }
+
+    /// One menu bar strip in a fixed theme, so a single image can show both.
+    private func strip(for state: MenuBarState, scheme: ColorScheme) -> some View {
+        MenuBarStrip(layout: StatusItemLayout.make(from: state), scheme: scheme, highlighted: false, width: 300, showsAppMenu: false, opaque: true)
+            .clipShape(RoundedRectangle(cornerRadius: 8))
+            .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(Color.primary.opacity(0.12)))
     }
 
     func settings(_ scheme: ColorScheme) -> some View {
@@ -198,12 +212,19 @@ struct MenuBarStrip: View {
     var highlighted: Bool
     var width: CGFloat = 780
     var showsAppMenu = true
+    /// Standalone strips (no wallpaper behind them) need a solid menu bar color.
+    var opaque = false
 
     static let statusItemWidth: CGFloat = 96
     /// Distance from the strip's trailing edge to the status item's center (keeps the hero arrow aligned).
     static let statusItemCenterFromTrailing: CGFloat = 16 + 64 + 14 + 24 + 14 + 18 + 14 + statusItemWidth / 2
 
     private var foreground: Color { scheme == .dark ? .white.opacity(0.92) : .black.opacity(0.85) }
+
+    private var background: Color {
+        if opaque { return scheme == .dark ? Color(white: 0.14) : Color(white: 0.97) }
+        return scheme == .dark ? Color.black.opacity(0.38) : Color.white.opacity(0.55)
+    }
 
     var body: some View {
         HStack(spacing: 0) {
@@ -235,7 +256,7 @@ struct MenuBarStrip: View {
         .font(.system(size: 13))
         .foregroundStyle(foreground)
         .frame(width: width, height: 24)
-        .background(scheme == .dark ? Color.black.opacity(0.38) : Color.white.opacity(0.55))
+        .background(background)
     }
 }
 

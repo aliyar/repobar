@@ -48,7 +48,7 @@ GitHub/GitLab, fast-forward your branch, or jump into the repository with your e
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/menubar-styles-dark.png">
-    <img src="docs/screenshots/menubar-styles-light.png" width="692" alt="The three menu bar styles: Dots, Count, Icon only">
+    <img src="docs/screenshots/menubar-styles-light.png" width="860" alt="The three menu bar styles — Dots, Count, Icon only — each shown on a light and a dark menu bar">
   </picture>
 </p>
 
@@ -58,13 +58,18 @@ news are shown.
 
 ## The panel
 
-<p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/panel-dark.png">
-    <img src="docs/screenshots/panel-light.png" width="428" alt="The RepoBar panel with an expanded repository showing incoming commits and actions">
-  </picture>
-</p>
+<table>
+  <tr>
+    <th width="50%">Light</th>
+    <th width="50%">Dark</th>
+  </tr>
+  <tr>
+    <td><img src="docs/screenshots/panel-light.png" alt="The RepoBar panel in light appearance, with an expanded repository showing incoming commits and actions"></td>
+    <td><img src="docs/screenshots/panel-dark.png" alt="The same panel in dark appearance"></td>
+  </tr>
+</table>
 
+- Light and dark appearance are both supported; the panel follows the system setting.
 - Repositories with new commits come first. Click a row to expand it; right-click for everything else
   (*Check Now*, *Copy Path*, *Watch Branch…*, *Color*, *Mute Notifications*, *Remove*).
 - Drop repository folders onto the panel to add them — or drop a folder that *contains* repositories and
@@ -74,12 +79,16 @@ news are shown.
 
 ## Settings
 
-<p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/settings-dark.png">
-    <img src="docs/screenshots/settings-light.png" width="568" alt="RepoBar settings: check interval, launch at login, notifications, menu bar style with live preview">
-  </picture>
-</p>
+<table>
+  <tr>
+    <th width="50%">Light</th>
+    <th width="50%">Dark</th>
+  </tr>
+  <tr>
+    <td><img src="docs/screenshots/settings-light.png" alt="RepoBar settings in light appearance: check interval, launch at login, notifications, menu bar style with live preview"></td>
+    <td><img src="docs/screenshots/settings-dark.png" alt="RepoBar settings in dark appearance"></td>
+  </tr>
+</table>
 
 Check interval (1–60 min), launch at login, notifications, default "open in" app, menu bar style with a live
 preview, and under *Advanced*: the git binary to use, extra `PATH` entries for credential helpers, fetch
