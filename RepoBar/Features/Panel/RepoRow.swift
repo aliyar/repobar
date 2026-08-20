@@ -297,6 +297,13 @@ struct CountCapsule: View {
         .foregroundStyle(tint)
         .padding(.horizontal, 6)
         .padding(.vertical, 2)
-        .background(tint.opacity(0.12), in: Capsule())
+        // The popover is translucent, so a tint-only wash disappears over a dark
+        // wallpaper. An opaque base gives the capsule a ground of its own.
+        .background {
+            Capsule()
+                .fill(Color(nsColor: .controlBackgroundColor))
+                .overlay(Capsule().fill(tint.opacity(0.20)))
+                .overlay(Capsule().strokeBorder(tint.opacity(0.40), lineWidth: 0.5))
+        }
     }
 }
