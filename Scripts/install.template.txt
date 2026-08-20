@@ -1,0 +1,46 @@
+RepoBar {{VERSION}}
+A macOS menu bar app that tells you when your git repositories have new commits on the remote.
+
+────────────────────────────────────────────────────────────
+INSTALL
+
+1. Unzip this file (double-click it).
+2. Drag RepoBar.app into your Applications folder.
+3. The app is not notarized by Apple, so the first open needs one extra step.
+
+   macOS 14 (Sonoma):
+
+     Right-click RepoBar.app  →  Open  →  Open
+
+   macOS 15 (Sequoia) and later:
+
+     Double-click RepoBar.app once (macOS will refuse), then open
+     System Settings  →  Privacy & Security, scroll down and click
+     "Open Anyway" next to the RepoBar message, then confirm with "Open".
+
+   The warning says the app "is damaged", "cannot be opened" or that Apple
+   "could not verify" it. That is macOS refusing an unsigned download, not a
+   broken file. The extra step is needed only once.
+
+   If macOS still refuses, run this in Terminal:
+
+     xattr -dr com.apple.quarantine /Applications/RepoBar.app
+
+────────────────────────────────────────────────────────────
+FIRST RUN
+
+RepoBar lives in the menu bar (look for the branch icon) — there is no Dock icon.
+Click it, then "Add Repository…" or drop repository folders onto the panel.
+Right-click the icon for quick actions; Settings has the check interval,
+notifications, launch-at-login and the menu bar style.
+
+UPDATES
+
+RepoBar checks for new versions once a day and can update itself.
+You can also check manually: menu bar icon  →  right-click  →  Settings…  →  About.
+
+REQUIREMENTS
+
+macOS 14 or later, and git (Xcode Command Line Tools or Homebrew).
+
+https://github.com/aliyar/repobar
