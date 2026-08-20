@@ -13,6 +13,7 @@
   <img alt="Swift 6" src="https://img.shields.io/badge/Swift-6-F05138?logo=swift&logoColor=white">
   <img alt="SwiftUI + AppKit" src="https://img.shields.io/badge/UI-SwiftUI%20%2B%20AppKit-0A84FF">
   <img alt="Auto-update with Sparkle" src="https://img.shields.io/badge/updates-Sparkle-6E56CF">
+  <img alt="MIT License" src="https://img.shields.io/badge/license-MIT-green">
 </p>
 
 <p align="center">
@@ -158,3 +159,7 @@ is `SUPublicEDKey` in `project.yml`). Back it up with `generate_keys -x <file>` 
 ## Acknowledgements
 
 Updates are delivered by [Sparkle](https://sparkle-project.org). Everything else is SwiftUI, AppKit and `git`.
+
+## License
+
+[MIT](LICENSE) © 2026 Aliyar
