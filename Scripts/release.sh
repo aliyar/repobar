@@ -1,6 +1,6 @@
 #!/bin/bash
-# RepoBar release: version bump → Release build → sign → zip (+ install.txt) → Sparkle appcast
-#                  → git commit/tag/push → GitHub release with assets.
+# RepoBar release: version bump → Release build → sign → zip (+ install.txt) → landing page
+#                  → Sparkle appcast → git commit/tag/push → GitHub release with assets.
 #
 # Usage:
 #   Scripts/release.sh <version> [--notes FILE] [--dry-run] [--no-git] [--draft] [--prerelease] [--adhoc]
@@ -77,6 +77,7 @@ fi
 # ---------- version bump ----------
 step "Setting version $VERSION"
 mkdir -p build && cp project.yml build/project.yml.before-release
+cp site/index.html build/index.html.before-release
 PREV_BUILD=$(sed -n 's/^ *CURRENT_PROJECT_VERSION: "\([0-9]*\)".*/\1/p' project.yml | head -1)
 BUILD=$(( ${PREV_BUILD:-0} + 1 ))
 sed -i '' "s/^\( *MARKETING_VERSION: \)\"[^\"]*\"/\1\"$VERSION\"/" project.yml
@@ -126,6 +127,10 @@ sed "s/{{VERSION}}/$VERSION/g" Scripts/install.template.txt > "$STAGE/install.tx
 cp "$STAGE/install.txt" "$DIST/install.txt"
 ditto -c -k --norsrc "$STAGE" "$ZIP"
 rm -rf "$STAGE"
+
+# ---------- landing page ----------
+step "Pointing the landing page at $TAG"
+Scripts/site-version.sh "$VERSION" "$ZIP" "$REPO"
 
 if [[ "$SIGN_MODE" == "Developer ID" && -n "${NOTARY_PROFILE:-}" ]]; then
   step "Notarizing"
@@ -188,6 +193,8 @@ fi
 if [[ $DRY_RUN -eq 1 ]]; then
   step "Dry run complete (version bump reverted)"
   cp build/project.yml.before-release project.yml
+  cp build/index.html.before-release site/index.html
+  git checkout -q -- site/sitemap.xml 2>/dev/null || true
   xcodegen generate --quiet
   ls -la "$DIST"
   exit 0
@@ -196,7 +203,7 @@ fi
 # ---------- git ----------
 if [[ $NO_GIT -eq 0 ]]; then
   step "Committing and tagging $TAG"
-  git add project.yml
+  git add project.yml site/index.html site/sitemap.xml
   git commit -q -m "Release $VERSION"
   git tag -a "$TAG" -m "$APP_NAME $VERSION"
   git push -q origin HEAD
