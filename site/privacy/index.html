@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="en" data-appearance="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Privacy — RepoBar</title>
+<meta name="description" content="RepoBar has no account, no telemetry and no backend. What the app and this website do and do not collect.">
+<link rel="canonical" href="https://repobar.greatpixels.com/privacy/">
+<meta name="robots" content="index, follow">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#FAFAF9" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0C0C0F" media="(prefers-color-scheme: dark)">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="RepoBar">
+<meta property="og:title" content="Privacy — RepoBar">
+<meta property="og:description" content="RepoBar has no account, no telemetry and no backend. What the app and this website do and do not collect.">
+<meta property="og:url" content="https://repobar.greatpixels.com/privacy/">
+<meta property="og:image" content="https://repobar.greatpixels.com/assets/og.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="icon" href="/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<div class="macbar" data-strip>
+  <div class="macbar-in">
+    <nav class="macbar-menus" aria-label="Sections">
+      <span class="macbar-app"><svg class="mb-glyph" viewBox="0 0 14 14" aria-hidden="true"><use href="#glyph-branch"/></svg></span>
+      <a href="/">RepoBar</a>
+      <a href="/#glance">The dots</a>
+      <a href="/#panel">The panel</a>
+      <a href="/#reads">What it runs</a>
+      <a href="/#install">Install</a>
+      <a href="https://github.com/aliyar/repobar" target="_blank" rel="noopener">GitHub</a>
+    </nav>
+    <div class="macbar-status">
+      <a class="mb-item" href="/" aria-label="RepoBar: 2 of 5 repositories have new commits. Open the working demo on the home page.">
+        <svg class="mb-glyph" viewBox="0 0 14 14" aria-hidden="true"><use href="#glyph-branch"/></svg>
+        <span class="mb-dots" aria-hidden="true">
+          <i class="mb-dot mb-dot--r1 is-new"></i>
+          <i class="mb-dot mb-dot--r2 is-new"></i>
+          <i class="mb-dot mb-dot--r3"></i>
+          <i class="mb-dot mb-dot--r4 is-error"><b>!</b></i>
+          <i class="mb-dot mb-dot--r5"></i>
+        </span>
+      </a>
+      <button type="button" class="mb-item mb-item--appearance" data-action="appearance"
+              title="Switch the menu bar between dark and light"
+              aria-label="Show the menu bar in the light appearance">
+        <svg class="mb-sun" viewBox="0 0 24 24" aria-hidden="true"><use href="#glyph-sun"/></svg>
+        <svg class="mb-moon" viewBox="0 0 24 24" aria-hidden="true"><use href="#glyph-moon"/></svg>
+      </button>
+      <svg class="mb-sys" viewBox="0 0 24 24" aria-hidden="true"><use href="#glyph-wifi"/></svg>
+      <svg class="mb-sys mb-sys--bat" viewBox="0 0 24 24" aria-hidden="true"><use href="#glyph-battery"/></svg>
+      <span class="mb-clock" data-clock>Mon 9:41</span>
+    </div>
+  </div>
+</div>
+<header class="masthead">
+  <a class="wordmark" href="/">
+    <svg class="wordmark-mark" viewBox="0 0 14 14" aria-hidden="true"><use href="#glyph-branch"/></svg>
+    <span>RepoBar</span>
+  </a>
+</header>
+<main id="main" class="doc">
+  <div class="col">
+    <h1>Privacy</h1>
+    <p class="updated">Last updated 20 August 2026</p>
+
+    <p>The short version: <b>RepoBar has no backend, no account and no telemetry.</b> Nothing about you, your repositories or your usage is collected, transmitted to us, or stored anywhere but on your own Mac.</p>
+
+    <h2>What the app stores, and where</h2>
+    <p>RepoBar keeps two JSON files in <span class="mono">~/Library/Application Support/RepoBar/</span>: the list of repositories you added, and a cache of the last check for each of them. Settings live in macOS user defaults. Delete those files and RepoBar starts empty. Nothing is stored anywhere else, and nothing is encrypted-and-uploaded — there is nowhere to upload it to.</p>
+
+    <h2>What the app sends over the network</h2>
+    <ul>
+      <li><b>Your own git remotes.</b> Checks run the <span class="mono">git</span> binary on your machine against the remotes your repositories already point at, using your existing SSH keys, ssh-agent and credential helpers. Those requests go to your git host — GitHub, GitLab, your own server — exactly as they would from your terminal. We never see them.</li>
+      <li><b>An update check.</b> Once a day RepoBar asks GitHub for a small file listing the latest version. That request tells GitHub your IP address and the app's user agent, as any download would. You can turn automatic checks off in Settings → About, and the app keeps working.</li>
+    </ul>
+    <p>That is the complete list. There is no analytics SDK, no crash reporter, no advertising identifier and no A/B testing.</p>
+
+    <h2>What this website collects</h2>
+    <p>Nothing of its own. This site sets <b>no cookies</b>, runs <b>no analytics</b>, and loads no fonts, scripts, images or trackers from third-party domains — every file it serves comes from this domain.</p>
+    <p>Two ordinary exceptions apply, and they are not ours:</p>
+    <ul>
+      <li>The site is served by a third-party hosting provider, which keeps standard server logs (IP address, timestamp, requested file, user agent) to serve and protect the site. We do not read them for anything else.</li>
+      <li>The download buttons and source links point at <a href="https://github.com" target="_blank" rel="noopener">GitHub</a>. Once you follow one, GitHub's own privacy policy applies.</li>
+    </ul>
+
+    <h2>Your data rights</h2>
+    <p>We hold no personal data about you, so there is nothing to export, correct or delete on our side. If you believe otherwise, or you have a question, open an issue at <a href="https://github.com/aliyar/repobar/issues" target="_blank" rel="noopener">github.com/aliyar/repobar/issues</a>.</p>
+
+    <h2>Children</h2>
+    <p>RepoBar is a developer tool with no accounts and no collected data; it is not directed at children.</p>
+
+    <h2>Changes</h2>
+    <p>If this policy changes, the date at the top changes with it.</p>
+    <a class="doc-back" href="/">← RepoBar</a>
+  </div>
+</main>
+<footer class="foot">
+  <div class="col">
+    <div class="foot-grid">
+      <div>
+        <p class="foot-brand"><svg class="wordmark-mark" viewBox="0 0 14 14" aria-hidden="true"><use href="#glyph-branch"/></svg> RepoBar <span class="mono">0.1.0</span></p>
+        <p class="foot-note">Free software, provided as is, without warranty of any kind.</p>
+      </div>
+      <nav aria-label="Project">
+        <p class="foot-head">Project</p>
+        <ul>
+          <li><a href="https://github.com/aliyar/repobar" target="_blank" rel="noopener">GitHub repository</a></li>
+          <li><a href="https://github.com/aliyar/repobar/releases" target="_blank" rel="noopener">All releases</a></li>
+          <li><a href="https://github.com/aliyar/repobar/issues" target="_blank" rel="noopener">Report an issue</a></li>
+        </ul>
+      </nav>
+      <nav aria-label="Legal">
+        <p class="foot-head">Legal</p>
+        <ul>
+          <li><a href="/privacy/">Privacy</a></li>
+          <li><a href="/terms/">Terms</a></li>
+          <li><a href="/license/">License</a></li>
+        </ul>
+      </nav>
+      <div>
+        <p class="foot-head">This page</p>
+        <p class="foot-note">No analytics, no cookies, no third-party requests. Three files, hand-written.</p>
+      </div>
+    </div>
+    <p class="foot-legal">RepoBar is not affiliated with Apple, GitHub, GitLab or Atlassian. macOS is a trademark of Apple Inc.</p>
+  </div>
+</footer>
+<svg width="0" height="0" class="vh" aria-hidden="true" focusable="false"><defs>
+  <symbol id="glyph-branch" viewBox="0 0 64 64">
+    <g fill="none" stroke="currentColor" stroke-width="6.6" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M32 50V34"/>
+      <path d="M32 34C32 28.5 24.6 27.4 19.6 22.4"/>
+      <path d="M32 34C32 28.5 39.4 27.4 44.4 22.4"/>
+    </g>
+    <path fill="currentColor" d="M12.6 15.4 23.07 16.53 13.73 25.87Z"/>
+    <path fill="currentColor" d="M51.4 15.4 50.27 25.87 40.93 16.53Z"/>
+  </symbol>
+  <symbol id="glyph-wifi" viewBox="0 0 24 24">
+      <g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 18l.01 0"/>
+        <path d="M9.172 15.172a4 4 0 0 1 5.656 0"/>
+        <path d="M6.343 12.343a8 8 0 0 1 11.314 0"/>
+        <path d="M3.515 9.515c4.686 -4.687 12.284 -4.687 17 0"/>
+      </g>
+    </symbol>
+  <symbol id="glyph-battery" viewBox="0 0 24 24">
+      <g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M6 7h11a2 2 0 0 1 2 2v.5a.5 .5 0 0 0 .5 .5a.5 .5 0 0 1 .5 .5v3a.5 .5 0 0 1 -.5 .5a.5 .5 0 0 0 -.5 .5v.5a2 2 0 0 1 -2 2h-11a2 2 0 0 1 -2 -2v-6a2 2 0 0 1 2 -2"/>
+        <path d="M7 10l0 4"/>
+        <path d="M10 10l0 4"/>
+        <path d="M13 10l0 4"/>
+      </g>
+    </symbol>
+  <symbol id="glyph-sun" viewBox="0 0 24 24">
+      <g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M8 12a4 4 0 1 0 8 0a4 4 0 1 0 -8 0"/>
+        <path d="M3 12h1m8 -9v1m8 8h1m-9 8v1m-6.4 -15.4l.7 .7m12.1 -.7l-.7 .7m0 11.4l.7 .7m-12.1 -.7l-.7 .7"/>
+      </g>
+    </symbol>
+  <symbol id="glyph-moon" viewBox="0 0 24 24">
+      <g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454l0 .008"/>
+      </g>
+    </symbol>
+</defs></svg>
+<script src="/main.js" defer></script>
+</body>
+</html>

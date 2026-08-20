@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="RepoBar">
+  <rect width="64" height="64" rx="14" fill="#3B4CC7"/>
+  <g transform="translate(32 33) scale(.88) translate(-32 -33)">
+    <g fill="none" stroke="#fff" stroke-width="6.6" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M32 50V34"/>
+      <path d="M32 34C32 28.5 24.6 27.4 19.6 22.4"/>
+      <path d="M32 34C32 28.5 39.4 27.4 44.4 22.4"/>
+    </g>
+    <path fill="#fff" d="M12.6 15.4 23.07 16.53 13.73 25.87Z"/>
+    <path fill="#fff" d="M51.4 15.4 50.27 25.87 40.93 16.53Z"/>
+  </g>
+</svg>

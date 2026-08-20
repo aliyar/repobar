@@ -33,7 +33,11 @@ struct ScreenshotTests {
             try write(scene.panel(scheme), name: "panel-\(suffix).png", to: directory)
             try write(scene.menuBarStyles(scheme), name: "menubar-styles-\(suffix).png", to: directory)
             try write(scene.settings(scheme), name: "settings-\(suffix).png", to: directory)
+            // Web assets: the panel with no canvas and no baked shadow, so the page owns elevation.
+            try write(scene.panelBare(scheme), name: "panel-bare-\(suffix).png", to: directory)
+            try write(scene.settingsBare(scheme), name: "settings-bare-\(suffix).png", to: directory)
         }
+        try write(scene.openGraph(), name: "og.png", to: directory, scale: 1)
         #expect(FileManager.default.fileExists(atPath: directory.appendingPathComponent("hero-light.jpg").path))
     }
 
@@ -145,6 +149,61 @@ struct ScreenshotScene {
         }
         .frame(width: 780, height: 540)
         .environment(\.colorScheme, scheme)
+    }
+
+    /// The panel alone, transparent, no shadow — the page applies its own elevation.
+    func panelBare(_ scheme: ColorScheme) -> some View {
+        panelView(scheme)
+            .padding(6)
+            .environment(\.colorScheme, scheme)
+    }
+
+    /// The Settings window with no canvas and no baked shadow.
+    func settingsBare(_ scheme: ColorScheme) -> some View {
+        WindowFrame(title: "General", tabs: ["General", "Advanced", "About"], icons: ["gearshape", "wrench.and.screwdriver", "info.circle"], selected: 0, scheme: scheme) {
+            GeneralSettingsView()
+                .environment(model)
+                .environment(loginItem)
+                .environment(notifications)
+                .environment(updates)
+                .frame(width: 480)
+        }
+        .padding(6)
+        .environment(\.colorScheme, scheme)
+    }
+
+    /// 1200x630 social card, rendered from the same components the app ships.
+    func openGraph() -> some View {
+        let layout = StatusItemLayout.make(from: model.menuBar)
+        return ZStack {
+            LinearGradient(colors: [Color(red: 0.44, green: 0.52, blue: 0.93), Color(red: 0.15, green: 0.23, blue: 0.53)],
+                           startPoint: .topLeading, endPoint: .bottomTrailing)
+            VStack(alignment: .leading, spacing: 0) {
+                Spacer(minLength: 0)
+                MenuBarStrip(layout: layout, scheme: .light, highlighted: false, width: 300, showsAppMenu: false, opaque: true)
+                    .clipShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
+                    .scaleEffect(2.1, anchor: .topLeading)
+                    .frame(width: 630, height: 50, alignment: .topLeading)
+                    .shadow(color: .black.opacity(0.3), radius: 26, y: 12)
+                Text("RepoBar")
+                    .font(.system(size: 76, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .padding(.top, 40)
+                Text("Know which repositories have new commits — without clicking.")
+                    .font(.system(size: 30, weight: .regular))
+                    .foregroundStyle(.white.opacity(0.88))
+                    .lineLimit(2)
+                    .padding(.top, 12)
+                Spacer(minLength: 0)
+                Text("repobar.greatpixels.com")
+                    .font(.system(size: 22, weight: .medium))
+                    .foregroundStyle(.white.opacity(0.62))
+            }
+            .padding(72)
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .frame(width: 1200, height: 630)
+        .environment(\.colorScheme, .dark)
     }
 
     func menuBarStyles(_ scheme: ColorScheme) -> some View {

@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="en" data-appearance="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Terms of Use — RepoBar</title>
+<meta name="description" content="The terms RepoBar is provided under: MIT licensed, as is, with no warranty and no liability.">
+<link rel="canonical" href="https://repobar.greatpixels.com/terms/">
+<meta name="robots" content="index, follow">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#FAFAF9" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0C0C0F" media="(prefers-color-scheme: dark)">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="RepoBar">
+<meta property="og:title" content="Terms of Use — RepoBar">
+<meta property="og:description" content="The terms RepoBar is provided under: MIT licensed, as is, with no warranty and no liability.">
+<meta property="og:url" content="https://repobar.greatpixels.com/terms/">
+<meta property="og:image" content="https://repobar.greatpixels.com/assets/og.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="icon" href="/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<div class="macbar" data-strip>
+  <div class="macbar-in">
+    <nav class="macbar-menus" aria-label="Sections">
+      <span class="macbar-app"><svg class="mb-glyph" viewBox="0 0 14 14" aria-hidden="true"><use href="#glyph-branch"/></svg></span>
+      <a href="/">RepoBar</a>
+      <a href="/#glance">The dots</a>
+      <a href="/#panel">The panel</a>
+      <a href="/#reads">What it runs</a>
+      <a href="/#install">Install</a>
+      <a href="https://github.com/aliyar/repobar" target="_blank" rel="noopener">GitHub</a>
+    </nav>
+    <div class="macbar-status">
+      <a class="mb-item" href="/" aria-label="RepoBar: 2 of 5 repositories have new commits. Open the working demo on the home page.">
+        <svg class="mb-glyph" viewBox="0 0 14 14" aria-hidden="true"><use href="#glyph-branch"/></svg>
+        <span class="mb-dots" aria-hidden="true">
+          <i class="mb-dot mb-dot--r1 is-new"></i>
+          <i class="mb-dot mb-dot--r2 is-new"></i>
+          <i class="mb-dot mb-dot--r3"></i>
+          <i class="mb-dot mb-dot--r4 is-error"><b>!</b></i>
+          <i class="mb-dot mb-dot--r5"></i>
+        </span>
+      </a>
+      <button type="button" class="mb-item mb-item--appearance" data-action="appearance"
+              title="Switch the menu bar between dark and light"
+              aria-label="Show the menu bar in the light appearance">
+        <svg class="mb-sun" viewBox="0 0 24 24" aria-hidden="true"><use href="#glyph-sun"/></svg>
+        <svg class="mb-moon" viewBox="0 0 24 24" aria-hidden="true"><use href="#glyph-moon"/></svg>
+      </button>
+      <svg class="mb-sys" viewBox="0 0 24 24" aria-hidden="true"><use href="#glyph-wifi"/></svg>
+      <svg class="mb-sys mb-sys--bat" viewBox="0 0 24 24" aria-hidden="true"><use href="#glyph-battery"/></svg>
+      <span class="mb-clock" data-clock>Mon 9:41</span>
+    </div>
+  </div>
+</div>
+<header class="masthead">
+  <a class="wordmark" href="/">
+    <svg class="wordmark-mark" viewBox="0 0 14 14" aria-hidden="true"><use href="#glyph-branch"/></svg>
+    <span>RepoBar</span>
+  </a>
+</header>
+<main id="main" class="doc">
+  <div class="col">
+    <h1>Terms of Use</h1>
+    <p class="updated">Last updated 20 August 2026</p>
+
+    <p>RepoBar is a free, open-source macOS application published by Great Pixels. By downloading, installing or using it, you agree to these terms. If you do not agree, do not use the app.</p>
+
+    <h2>The software is provided “as is”</h2>
+    <p>RepoBar is licensed under the <a href="/license/">MIT License</a>. As that licence states, the software is provided <b>without warranty of any kind</b>, express or implied, including but not limited to the warranties of merchantability, fitness for a particular purpose and non-infringement.</p>
+
+    <h2>No liability</h2>
+    <p>To the fullest extent permitted by law, the author and Great Pixels are <b>not liable</b> for any claim, damage or other liability arising from the software or its use. This includes, without limitation:</p>
+    <ul>
+      <li>loss of data, source code, commits or work in progress;</li>
+      <li>a check that reports the wrong thing — a repository shown as up to date when it is not, or the reverse;</li>
+      <li>the result of any <span class="mono">git fetch</span> or fast-forward merge the app performs at your request;</li>
+      <li>downtime, missed changes, or decisions made on the basis of what the app displayed;</li>
+      <li>anything that happens after you allow an unsigned application to run on your Mac.</li>
+    </ul>
+    <p>You use RepoBar at your own risk. Keep backups and keep your own copy of anything you care about.</p>
+
+    <h2>What you are responsible for</h2>
+    <ul>
+      <li>The repositories you add, and the credentials, SSH keys and credential helpers the app uses on your behalf — RepoBar reuses your existing git configuration and never stores credentials of its own.</li>
+      <li>Deciding whether to allow an application that Apple has not notarized to run on your Mac, and following the steps to do so.</li>
+      <li>Complying with the terms of the git hosts you connect to.</li>
+    </ul>
+
+    <h2>Not notarized</h2>
+    <p>RepoBar is signed but <b>not notarized by Apple</b>, because notarization runs through an Apple Developer Program membership, which this project does not have. macOS will therefore warn you the first time you open it, and you have to allow it explicitly. That decision is yours; the instructions on the home page describe it, they do not make it safe or unsafe. If you would rather not trust a binary, the complete source is published and you can build it yourself.</p>
+
+    <h2>No affiliation</h2>
+    <p>RepoBar is an independent project. It is not affiliated with, endorsed by, or sponsored by Apple Inc., GitHub, Inc., GitLab B.V., Atlassian Corporation or any other company whose services it can connect to. All trademarks belong to their respective owners; macOS is a trademark of Apple Inc.</p>
+
+    <h2>Third-party links and services</h2>
+    <p>This site links to GitHub for downloads, source code and issues. Those services have their own terms and privacy policies, and we are not responsible for their content or availability.</p>
+
+    <h2>No support commitment</h2>
+    <p>RepoBar is maintained as time allows. Nothing here promises support, bug fixes, updates or continued availability. Issues and pull requests are welcome on GitHub, and may be answered or not.</p>
+
+    <h2>Changes</h2>
+    <p>These terms may change; the date at the top always says when they last did. Continuing to use the app after a change means you accept the current version.</p>
+
+    <h2>Governing law</h2>
+    <p>These terms are governed by the laws of the Republic of Türkiye. If any provision is found unenforceable, the rest stays in force.</p>
+
+    <h2>Contact</h2>
+    <p>Questions about these terms: open an issue at <a href="https://github.com/aliyar/repobar/issues" target="_blank" rel="noopener">github.com/aliyar/repobar/issues</a>.</p>
+    <a class="doc-back" href="/">← RepoBar</a>
+  </div>
+</main>
+<footer class="foot">
+  <div class="col">
+    <div class="foot-grid">
+      <div>
+        <p class="foot-brand"><svg class="wordmark-mark" viewBox="0 0 14 14" aria-hidden="true"><use href="#glyph-branch"/></svg> RepoBar <span class="mono">0.1.0</span></p>
+        <p class="foot-note">Free software, provided as is, without warranty of any kind.</p>
+      </div>
+      <nav aria-label="Project">
+        <p class="foot-head">Project</p>
+        <ul>
+          <li><a href="https://github.com/aliyar/repobar" target="_blank" rel="noopener">GitHub repository</a></li>
+          <li><a href="https://github.com/aliyar/repobar/releases" target="_blank" rel="noopener">All releases</a></li>
+          <li><a href="https://github.com/aliyar/repobar/issues" target="_blank" rel="noopener">Report an issue</a></li>
+        </ul>
+      </nav>
+      <nav aria-label="Legal">
+        <p class="foot-head">Legal</p>
+        <ul>
+          <li><a href="/privacy/">Privacy</a></li>
+          <li><a href="/terms/">Terms</a></li>
+          <li><a href="/license/">License</a></li>
+        </ul>
+      </nav>
+      <div>
+        <p class="foot-head">This page</p>
+        <p class="foot-note">No analytics, no cookies, no third-party requests. Three files, hand-written.</p>
+      </div>
+    </div>
+    <p class="foot-legal">RepoBar is not affiliated with Apple, GitHub, GitLab or Atlassian. macOS is a trademark of Apple Inc.</p>
+  </div>
+</footer>
+<svg width="0" height="0" class="vh" aria-hidden="true" focusable="false"><defs>
+  <symbol id="glyph-branch" viewBox="0 0 64 64">
+    <g fill="none" stroke="currentColor" stroke-width="6.6" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M32 50V34"/>
+      <path d="M32 34C32 28.5 24.6 27.4 19.6 22.4"/>
+      <path d="M32 34C32 28.5 39.4 27.4 44.4 22.4"/>
+    </g>
+    <path fill="currentColor" d="M12.6 15.4 23.07 16.53 13.73 25.87Z"/>
+    <path fill="currentColor" d="M51.4 15.4 50.27 25.87 40.93 16.53Z"/>
+  </symbol>
+  <symbol id="glyph-wifi" viewBox="0 0 24 24">
+      <g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 18l.01 0"/>
+        <path d="M9.172 15.172a4 4 0 0 1 5.656 0"/>
+        <path d="M6.343 12.343a8 8 0 0 1 11.314 0"/>
+        <path d="M3.515 9.515c4.686 -4.687 12.284 -4.687 17 0"/>
+      </g>
+    </symbol>
+  <symbol id="glyph-battery" viewBox="0 0 24 24">
+      <g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M6 7h11a2 2 0 0 1 2 2v.5a.5 .5 0 0 0 .5 .5a.5 .5 0 0 1 .5 .5v3a.5 .5 0 0 1 -.5 .5a.5 .5 0 0 0 -.5 .5v.5a2 2 0 0 1 -2 2h-11a2 2 0 0 1 -2 -2v-6a2 2 0 0 1 2 -2"/>
+        <path d="M7 10l0 4"/>
+        <path d="M10 10l0 4"/>
+        <path d="M13 10l0 4"/>
+      </g>
+    </symbol>
+  <symbol id="glyph-sun" viewBox="0 0 24 24">
+      <g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M8 12a4 4 0 1 0 8 0a4 4 0 1 0 -8 0"/>
+        <path d="M3 12h1m8 -9v1m8 8h1m-9 8v1m-6.4 -15.4l.7 .7m12.1 -.7l-.7 .7m0 11.4l.7 .7m-12.1 -.7l-.7 .7"/>
+      </g>
+    </symbol>
+  <symbol id="glyph-moon" viewBox="0 0 24 24">
+      <g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454l0 .008"/>
+      </g>
+    </symbol>
+</defs></svg>
+<script src="/main.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,663 @@
+<!doctype html>
+<html lang="en" data-appearance="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>RepoBar — see which repos have new commits, from the menu bar</title>
+<meta name="description" content="RepoBar watches your local git repositories and puts one colored dot per repo in the macOS menu bar. Filled means the remote is ahead. Free and open source.">
+<link rel="canonical" href="https://repobar.greatpixels.com/">
+<meta name="robots" content="index, follow, max-image-preview:large">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#FAFAF9" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0C0C0F" media="(prefers-color-scheme: dark)">
+
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="RepoBar">
+<meta property="og:url" content="https://repobar.greatpixels.com/">
+<meta property="og:title" content="RepoBar — know which repositories have new commits">
+<meta property="og:description" content="A macOS menu bar app that watches your local git repositories and lights up when the remote is ahead of you. Free and open source.">
+<meta property="og:image" content="https://repobar.greatpixels.com/assets/og.jpg">
+<meta property="og:image:secure_url" content="https://repobar.greatpixels.com/assets/og.jpg">
+<meta property="og:image:type" content="image/jpeg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="The RepoBar icon in a macOS menu bar with five colored dots, two of them filled.">
+<meta property="og:locale" content="en_US">
+<meta name="twitter:card" content="summary_large_image">
+
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="icon" href="/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="preload" href="/assets/fonts/commit-mono-400.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/styles.css">
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "@id": "https://repobar.greatpixels.com/#app",
+  "name": "RepoBar",
+  "description": "A macOS menu bar app that watches your local git repositories and shows which ones have commits on the remote that you have not seen yet.",
+  "url": "https://repobar.greatpixels.com/",
+  "applicationCategory": "DeveloperApplication",
+  "operatingSystem": "macOS 14.0 or later",
+  "softwareVersion": "0.1.0",
+  "datePublished": "2026-08-20",
+  "downloadUrl": "https://github.com/aliyar/repobar/releases/latest",
+  "installUrl": "https://github.com/aliyar/repobar/releases/latest",
+  "softwareRequirements": "macOS 14.0 or later, Apple Silicon or Intel, git",
+  "fileSize": "3.4 MB",
+  "screenshot": "https://repobar.greatpixels.com/assets/panel-light.png",
+  "featureList": [
+    "One colored dot per repository in the menu bar",
+    "Incoming commits listed before you fetch them",
+    "Fast-forward-only pull",
+    "Notifications with Open and Pull actions",
+    "No account, no telemetry, no backend"
+  ],
+  "license": "https://opensource.org/licenses/MIT",
+  "isAccessibleForFree": true,
+  "codeRepository": "https://github.com/aliyar/repobar",
+  "author": { "@type": "Organization", "name": "Great Pixels", "url": "https://greatpixels.com/" },
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD", "availability": "https://schema.org/InStock", "url": "https://github.com/aliyar/repobar/releases/latest" }
+}
+</script>
+</head>
+<body>
+<!--
+  DIRECTION — repobar.greatpixels.com
+  THESIS: the page is a commit graph. Five colored rails, one per repository, run the
+    whole scroll and every section sits on a node. It refuses the Mac-app template of
+    hero screenshot plus feature cards.
+  OWN-WORLD: paper and ink with the app's five repository colors carried only by the
+    rails, the dots and the nodes. Commit Mono is the lettering of the notation; the
+    system face carries prose. No cards, no gradients, no icon tiles.
+  STORY: you can read five repositories from six-pixel dots, the check never writes to
+    your repositories, and the unsigned download is explained rather than excused.
+  FIRST VIEWPORT: a true-scale macOS menu bar across the top, the same menu bar
+    magnified underneath with its dots filling in, the promise, one download button,
+    and the panel at its real 340-point width.
+  FORM: commit graph, candidate 1 of the grounded list, variant cf499f9b.
+  FINISH: unreviewed and undocumented is unfinished; this build ends with the finish
+    review, the verdict, DESIGN.md, and every shipping raster carrying its provenance.
+-->
+<a class="skip" href="#main">Skip to content</a>
+
+<div class="macbar" data-strip>
+  <div class="macbar-in">
+    <nav class="macbar-menus" aria-label="Sections">
+      <span class="macbar-app"><svg class="mb-glyph" viewBox="0 0 14 14" aria-hidden="true"><use href="#glyph-branch"/></svg></span>
+      <a href="/">RepoBar</a>
+      <a href="#glance">The dots</a>
+      <a href="#panel">The panel</a>
+      <a href="#reads">What it runs</a>
+      <a href="#install">Install</a>
+      <a href="https://github.com/aliyar/repobar" target="_blank" rel="noopener">GitHub</a>
+    </nav>
+    <div class="macbar-status">
+      <button type="button" class="mb-item" id="rb-trigger" aria-expanded="false" aria-controls="rb-panel"
+              aria-label="RepoBar: 2 of 5 repositories have new commits. Open the demo panel.">
+        <svg class="mb-glyph" viewBox="0 0 14 14" aria-hidden="true"><use href="#glyph-branch"/></svg>
+        <span class="mb-dots" data-dots>
+          <i class="mb-dot mb-dot--r1 is-new d1" data-dot="website"></i><i class="mb-dot mb-dot--r2 is-new d2" data-dot="api"></i><i class="mb-dot mb-dot--r3" data-dot="mobile-app"></i><i class="mb-dot mb-dot--r4 is-error" data-dot="design-system"><b>!</b></i><i class="mb-dot mb-dot--r5" data-dot="infra"></i>
+        </span>
+      </button>
+      <button type="button" class="mb-item mb-item--appearance" data-action="appearance"
+              title="Switch the menu bar between dark and light"
+              aria-label="Show the menu bar in the light appearance">
+        <svg class="mb-sun" viewBox="0 0 24 24" aria-hidden="true"><use href="#glyph-sun"/></svg>
+        <svg class="mb-moon" viewBox="0 0 24 24" aria-hidden="true"><use href="#glyph-moon"/></svg>
+      </button>
+      <svg class="mb-sys" viewBox="0 0 24 24" aria-hidden="true"><use href="#glyph-wifi"/></svg>
+      <svg class="mb-sys mb-sys--bat" viewBox="0 0 24 24" aria-hidden="true"><use href="#glyph-battery"/></svg>
+      <span class="mb-clock" data-clock>Mon 9:41</span>
+    </div>
+  </div>
+
+  <div class="rb-pop" id="rb-panel" hidden>
+    <div class="rb-arrow" aria-hidden="true"></div>
+    <div class="rb-panel">
+      <div class="rb-head">
+        <div class="rb-head-text">
+          <p class="rb-status" data-status>2 of 5 repositories have new commits · 1 failed</p>
+          <p class="rb-updated" data-updated>Updated just now</p>
+        </div>
+        <div class="rb-head-actions">
+          <button type="button" class="rb-icon" data-action="refresh" title="Check now" aria-label="Check all repositories now">
+            <svg class="rb-ico-arrow" viewBox="0 0 24 24" aria-hidden="true"><use href="#glyph-refresh"/></svg>
+            <svg class="rb-ico-spin" viewBox="0 0 14 14" aria-hidden="true"><use href="#glyph-spinner"/></svg>
+          </button>
+          <a class="rb-icon" href="#settings-shot" title="Settings" aria-label="See the Settings window">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#glyph-settings"/></svg>
+          </a>
+        </div>
+      </div>
+      <ul class="rb-rows" data-rows>
+        <li class="rb-repo" data-repo="website" data-color="r1" data-behind="3" data-unseen="3">
+          <button type="button" class="rb-row" aria-expanded="false">
+            <i class="dot dot--r1 is-new" data-rowdot aria-hidden="true"></i>
+            <span class="rb-name">website</span>
+            <span class="rb-branch">main</span>
+            <span class="rb-caps"><span class="cap cap--down" data-behind>↓3</span></span>
+            <svg class="rb-rowspin" viewBox="0 0 14 14" aria-hidden="true"><use href="#glyph-spinner"/></svg><svg class="rb-chev" viewBox="0 0 24 24" aria-hidden="true"><use href="#glyph-chevron"/></svg>
+          </button>
+          <div class="rb-body">
+            <ol class="rb-commits">
+              <li><span class="rb-sha">83565de</span><span class="rb-subject">Fix flaky retry logic in the sync worker</span><span class="rb-meta">Mia Chen · 5 min. ago</span></li>
+              <li><span class="rb-sha">1d358b1</span><span class="rb-subject">Add dark mode to the settings page</span><span class="rb-meta">Tom Becker · 48 min. ago</span></li>
+              <li><span class="rb-sha">a081ba9</span><span class="rb-subject">Bump dependencies</span><span class="rb-meta">Renovate Bot · 3 hr. ago</span></li>
+            </ol>
+            <div class="rb-actions">
+              <button type="button" class="rb-btn" data-action="pull">Pull</button>
+              <button type="button" class="rb-btn" data-action="seen">Mark as seen</button>
+              <span class="rb-open">
+                <button type="button" class="rb-btn rb-btn--menu" data-action="open" aria-expanded="false"><svg class="rb-open-ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#glyph-open"/></svg>Open in GitHub Desktop<span class="rb-open-div" aria-hidden="true"></span><svg class="rb-caret" viewBox="0 0 24 24" aria-hidden="true"><use href="#glyph-caret"/></svg></button>
+                <div class="rb-dropdown" hidden>
+                  <p class="rb-menu-head">Git clients</p>
+                  <ul class="rb-menu-list">
+                    <li><button type="button" class="is-current"><svg class="rb-menu-check" viewBox="0 0 24 24" aria-hidden="true"><use href="#glyph-check"/></svg><span>GitHub Desktop</span></button></li>
+                    <li><button type="button"><svg class="rb-menu-check" viewBox="0 0 24 24" aria-hidden="true"><use href="#glyph-check"/></svg><span>Sourcetree</span></button></li>
+                    <li><button type="button"><svg class="rb-menu-check" viewBox="0 0 24 24" aria-hidden="true"><use href="#glyph-check"/></svg><span>Fork</span></button></li>
+                    <li><button type="button"><svg class="rb-menu-check" viewBox="0 0 24 24" aria-hidden="true"><use href="#glyph-check"/></svg><span>Tower</span></button></li>
+                  </ul>
+                  <p class="rb-menu-head">Finder</p>
+                  <ul class="rb-menu-list">
+                    <li><button type="button"><svg class="rb-menu-check" viewBox="0 0 24 24" aria-hidden="true"><use href="#glyph-check"/></svg><span>Finder</span></button></li>
+                  </ul>
+                  <p class="rb-menu-head">Terminals</p>
+                  <ul class="rb-menu-list">
+                    <li><button type="button"><svg class="rb-menu-check" viewBox="0 0 24 24" aria-hidden="true"><use href="#glyph-check"/></svg><span>Terminal</span></button></li>
+                    <li><button type="button"><svg class="rb-menu-check" viewBox="0 0 24 24" aria-hidden="true"><use href="#glyph-check"/></svg><span>iTerm</span></button></li>
+                    <li><button type="button"><svg class="rb-menu-check" viewBox="0 0 24 24" aria-hidden="true"><use href="#glyph-check"/></svg><span>Warp</span></button></li>
+                  </ul>
+                  <p class="rb-menu-head">Editors</p>
+                  <ul class="rb-menu-list">
+                    <li><button type="button"><svg class="rb-menu-check" viewBox="0 0 24 24" aria-hidden="true"><use href="#glyph-check"/></svg><span>Visual Studio Code</span></button></li>
+                    <li><button type="button"><svg class="rb-menu-check" viewBox="0 0 24 24" aria-hidden="true"><use href="#glyph-check"/></svg><span>Cursor</span></button></li>
+                    <li><button type="button"><svg class="rb-menu-check" viewBox="0 0 24 24" aria-hidden="true"><use href="#glyph-check"/></svg><span>Xcode</span></button></li>
+                    <li><button type="button"><svg class="rb-menu-check" viewBox="0 0 24 24" aria-hidden="true"><use href="#glyph-check"/></svg><span>Sublime Text</span></button></li>
+                    <li><button type="button"><svg class="rb-menu-check" viewBox="0 0 24 24" aria-hidden="true"><use href="#glyph-check"/></svg><span>Zed</span></button></li>
+                  </ul>
+                  <ul class="rb-menu-list rb-menu-list--last">
+                    <li><button type="button"><svg class="rb-menu-check" viewBox="0 0 24 24" aria-hidden="true"><use href="#glyph-check"/></svg><span>Repository page</span></button></li>
+                  </ul>
+                </div>
+              </span>
+            </div>
+          </div>
+        </li>
+        <li class="rb-repo" data-repo="api" data-color="r2" data-behind="1" data-ahead="2" data-unseen="1" data-dirty="1">
+          <button type="button" class="rb-row" aria-expanded="false">
+            <i class="dot dot--r2 is-new" data-rowdot aria-hidden="true"></i>
+            <span class="rb-name">api<i class="rb-dirty" title="Uncommitted changes"></i></span>
+            <span class="rb-branch">feature/rate-limits</span>
+            <span class="rb-caps"><span class="cap cap--down" data-behind>↓1</span><span class="cap cap--up">↑2</span></span>
+            <svg class="rb-rowspin" viewBox="0 0 14 14" aria-hidden="true"><use href="#glyph-spinner"/></svg><svg class="rb-chev" viewBox="0 0 24 24" aria-hidden="true"><use href="#glyph-chevron"/></svg>
+          </button>
+          <div class="rb-body">
+            <ol class="rb-commits">
+              <li><span class="rb-sha">4c1e77a</span><span class="rb-subject">Migrate CI to macOS 15 runners</span><span class="rb-meta">Sara Lind · 26 hr. ago</span></li>
+            </ol>
+            <div class="rb-actions">
+              <button type="button" class="rb-btn" data-action="pull" disabled title="Working tree has changes">Pull</button>
+              <button type="button" class="rb-btn" data-action="seen">Mark as seen</button>
+              <span class="rb-note">Dirty working tree, so Pull is refused.</span>
+            </div>
+          </div>
+        </li>
+        <li class="rb-repo" data-repo="design-system" data-color="r4" data-error="1">
+          <button type="button" class="rb-row" aria-expanded="false">
+            <i class="dot dot--r4 is-error" data-rowdot aria-hidden="true"><b>!</b></i>
+            <span class="rb-name">design-system</span>
+            <span class="rb-branch">main <em class="rb-err">SSH authentication failed</em></span>
+            <span class="rb-caps"></span>
+            <svg class="rb-rowspin" viewBox="0 0 14 14" aria-hidden="true"><use href="#glyph-spinner"/></svg><svg class="rb-chev" viewBox="0 0 24 24" aria-hidden="true"><use href="#glyph-chevron"/></svg>
+          </button>
+          <div class="rb-body">
+            <p class="rb-explain">Permission denied (publickey). RepoBar backs off instead of retrying, and tells you to add the key to your agent.</p>
+          </div>
+        </li>
+        <li class="rb-repo" data-repo="infra" data-color="r5">
+          <button type="button" class="rb-row" aria-expanded="false">
+            <i class="dot dot--r5" data-rowdot aria-hidden="true"></i>
+            <span class="rb-name">infra</span>
+            <span class="rb-branch">main</span>
+            <span class="rb-caps"></span>
+            <svg class="rb-rowspin" viewBox="0 0 14 14" aria-hidden="true"><use href="#glyph-spinner"/></svg><svg class="rb-chev" viewBox="0 0 24 24" aria-hidden="true"><use href="#glyph-chevron"/></svg>
+          </button>
+          <div class="rb-body"><p class="rb-explain">Up to date with origin/main.</p></div>
+        </li>
+        <li class="rb-repo" data-repo="mobile-app" data-color="r3">
+          <button type="button" class="rb-row" aria-expanded="false">
+            <i class="dot dot--r3" data-rowdot aria-hidden="true"></i>
+            <span class="rb-name">mobile-app</span>
+            <span class="rb-branch">main</span>
+            <span class="rb-caps"></span>
+            <svg class="rb-rowspin" viewBox="0 0 14 14" aria-hidden="true"><use href="#glyph-spinner"/></svg><svg class="rb-chev" viewBox="0 0 24 24" aria-hidden="true"><use href="#glyph-chevron"/></svg>
+          </button>
+          <div class="rb-body"><p class="rb-explain">Up to date with origin/main.</p></div>
+        </li>
+      </ul>
+      <div class="rb-foot">
+        <span class="rb-foot-l"><svg class="rb-plus" viewBox="0 0 24 24" aria-hidden="true"><use href="#glyph-plus"/></svg>Add Repository…</span>
+        <span class="rb-foot-r">
+          <button type="button" class="rb-pause" data-action="pause" title="Pause checks" aria-label="Pause checks" aria-pressed="false">
+            <svg class="rb-pause-bars" viewBox="0 0 24 24" aria-hidden="true"><use href="#glyph-pause"/></svg>
+            <svg class="rb-pause-play" viewBox="0 0 24 24" aria-hidden="true"><use href="#glyph-play"/></svg>
+          </button>
+          <span class="rb-quit">Quit</span>
+        </span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<header class="masthead">
+  <a class="wordmark" href="/">
+    <svg class="wordmark-mark" viewBox="0 0 14 14" aria-hidden="true"><use href="#glyph-branch"/></svg>
+    <span>RepoBar</span>
+  </a>
+  <a class="btn btn--sm" href="https://github.com/aliyar/repobar/releases/download/v0.1.0/RepoBar-0.1.0.zip">Download</a>
+</header>
+
+<main id="main">
+  <div class="rails" aria-hidden="true">
+    <i class="rail rail--1 is-new"></i><i class="rail rail--2 is-new"></i><i class="rail rail--3"></i><i class="rail rail--4 is-error"></i><i class="rail rail--5"></i>
+  </div>
+
+  <!-- ── hero ─────────────────────────────────────────────────────────── -->
+  <section class="hero" data-node="1">
+    <div class="col">
+      <div class="hero-text">
+      <div class="glance" data-glance>
+        <button type="button" class="menubar menubar--loupe" data-open-panel
+                aria-label="Open the RepoBar panel in the menu bar at the top of the page">
+          <svg class="mb-glyph" viewBox="0 0 14 14" aria-hidden="true"><use href="#glyph-branch"/></svg>
+          <span class="mb-dots" aria-hidden="true">
+            <i class="mb-dot mb-dot--r1 is-new d1"></i>
+            <i class="mb-dot mb-dot--r2 is-new d2"></i>
+            <i class="mb-dot mb-dot--r3"></i>
+            <i class="mb-dot mb-dot--r4 is-error"><b>!</b></i>
+            <i class="mb-dot mb-dot--r5"></i>
+          </span>
+        </button>
+        <p class="glance-cap"><b>2 of 5</b> repositories have new commits<span class="js-only"> · click the bar to open it</span></p>
+      </div>
+
+      <h1>Know which repositories have new commits — without clicking.</h1>
+      <p class="lead">RepoBar watches your local clones and puts one colored dot per repository in the menu bar. Filled means the remote is ahead of you. Click to read the incoming commits and fast-forward, without opening a terminal.</p>
+
+      <div class="cta">
+        <a class="btn btn--lg" href="https://github.com/aliyar/repobar/releases/download/v0.1.0/RepoBar-0.1.0.zip">Download for macOS</a>
+        <a class="btn btn--ghost btn--lg" href="https://github.com/aliyar/repobar" target="_blank" rel="noopener">Source on GitHub</a>
+      </div>
+      <ul class="req" aria-label="Requirements">
+        <li>0.1.0</li><li>3.4 MB</li><li>macOS 14 or later</li><li>Apple Silicon and Intel</li><li>MIT</li>
+      </ul>
+      <p class="req-note"><a href="#install">Not notarized, so the first launch needs one extra step. Here is exactly what it looks like.</a></p>
+      </div>
+
+      <figure class="shot shot--panel">
+        <picture data-sim-shot>
+          <source srcset="/assets/panel-dark.webp" type="image/webp">
+          <img src="/assets/panel-dark.png" width="352" height="435" fetchpriority="high" decoding="async"
+               alt="The RepoBar panel: five repositories sorted with new ones first. The repository called website is expanded and lists three incoming commits with short SHA, subject, author and relative time, above Pull, Mark as seen and Open in Finder buttons.">
+        </picture>
+        <figcaption>Shown at actual size with example repositories: the panel is 340 points wide.</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- ── the dots ─────────────────────────────────────────────────────── -->
+  <section id="glance" class="band" data-node="2">
+    <div class="col">
+      <h2>One dot per repository. That is the whole interface.</h2>
+      <p class="prose">RepoBar draws its own menu bar item, so a repository can have a colour instead of a place in a list. After a week you stop reading the menu bar and start recognising it: red is the site, blue is the API, and you know something happened before you have looked at it properly.</p>
+
+      <dl class="states">
+        <div class="state">
+          <dt><i class="dot dot--r1 is-new"></i>Filled</dt>
+          <dd>The remote has commits you have not seen yet.</dd>
+        </div>
+        <div class="state">
+          <dt><i class="dot dot--r3"></i>Faded</dt>
+          <dd>Up to date. Nothing to do.</dd>
+        </div>
+        <div class="state">
+          <dt><i class="dot dot--r4 is-error"><b>!</b></i>Ringed</dt>
+          <dd>The last check failed. Expand the row and it tells you why.</dd>
+        </div>
+      </dl>
+
+      <h3>Or don’t use dots at all.</h3>
+      <p class="prose">Three menu bar styles, switchable in Settings with a live preview. <b>Dots</b> gives every repository its own; <b>Count</b> collapses everything into one number, repositories or commits, whichever you prefer; <b>Icon only</b> shows the glyph with a small accent dot when something is new. Up to eight repositories each get a dot; beyond that the menu bar narrows to the ones with news and adds a <span class="mono">+N</span>.</p>
+
+      <div class="styles">
+        <div class="styles-row">
+          <p class="styles-name">Dots</p>
+          <div class="menubar menubar--sample" aria-hidden="true"><svg class="mb-glyph" viewBox="0 0 14 14"><use href="#glyph-branch"/></svg><span class="mb-dots"><i class="mb-dot mb-dot--r1 is-new"></i><i class="mb-dot mb-dot--r2 is-new"></i><i class="mb-dot mb-dot--r3"></i><i class="mb-dot mb-dot--r4 is-error"><b>!</b></i><i class="mb-dot mb-dot--r5"></i></span><span class="mb-clock">9:41</span></div>
+          <div class="menubar menubar--sample menubar--dark" aria-hidden="true"><svg class="mb-glyph" viewBox="0 0 14 14"><use href="#glyph-branch"/></svg><span class="mb-dots"><i class="mb-dot mb-dot--r1 is-new"></i><i class="mb-dot mb-dot--r2 is-new"></i><i class="mb-dot mb-dot--r3"></i><i class="mb-dot mb-dot--r4 is-error"><b>!</b></i><i class="mb-dot mb-dot--r5"></i></span><span class="mb-clock">9:41</span></div>
+        </div>
+        <div class="styles-row">
+          <p class="styles-name">Count</p>
+          <div class="menubar menubar--sample" aria-hidden="true"><svg class="mb-glyph" viewBox="0 0 14 14"><use href="#glyph-branch"/></svg><span class="mb-count">2</span><span class="mb-clock">9:41</span></div>
+          <div class="menubar menubar--sample menubar--dark" aria-hidden="true"><svg class="mb-glyph" viewBox="0 0 14 14"><use href="#glyph-branch"/></svg><span class="mb-count">2</span><span class="mb-clock">9:41</span></div>
+        </div>
+        <div class="styles-row">
+          <p class="styles-name">Icon only</p>
+          <div class="menubar menubar--sample" aria-hidden="true"><span class="mb-solo"><svg class="mb-glyph" viewBox="0 0 14 14"><use href="#glyph-branch"/></svg><i class="mb-pip"></i></span><span class="mb-clock">9:41</span></div>
+          <div class="menubar menubar--sample menubar--dark" aria-hidden="true"><span class="mb-solo"><svg class="mb-glyph" viewBox="0 0 14 14"><use href="#glyph-branch"/></svg><i class="mb-pip"></i></span><span class="mb-clock">9:41</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── the panel ────────────────────────────────────────────────────── -->
+  <section id="panel" class="band band--alt" data-node="3">
+    <div class="col">
+      <h2>Everything you’d open a terminal for, in 340 points.</h2>
+
+      <div class="row">
+        <div class="row-text">
+          <h3>The commits, before you fetch them</h3>
+          <p class="prose">Expand a repository and the incoming commits are already there: short SHA, subject, author, how long ago. Click one to open it on GitHub, GitLab, Bitbucket, Azure DevOps, Codeberg or sourcehut. Commits you haven’t seen are marked; the rest are context.</p>
+        </div>
+        <figure class="row-media shot">
+          <picture>
+            <source media="(prefers-color-scheme: dark)" srcset="/assets/commits-dark.webp" type="image/webp">
+            <source media="(prefers-color-scheme: dark)" srcset="/assets/commits-dark.png">
+            <source srcset="/assets/commits-light.webp" type="image/webp">
+            <img src="/assets/commits-light.png" width="340" height="143" loading="lazy" decoding="async"
+                 alt="An expanded repository row listing three incoming commits with their short SHAs, subjects, authors and relative times.">
+          </picture>
+        </figure>
+      </div>
+
+      <div class="row row--flip">
+        <div class="row-text">
+          <h3>Pull, without the part where you get it wrong</h3>
+          <p class="prose">Pull is fast-forward only. No merge commits, no rebase, no surprises. If your branch has diverged or your working tree is dirty, RepoBar refuses and says which. <b>Mark as seen</b> clears the dot without changing a single byte. <b>Open in</b> takes you to Finder, Terminal, VS Code, Cursor, Xcode, Fork or Tower, listing the ones you actually have installed.</p>
+        </div>
+        <figure class="row-media shot">
+          <picture>
+            <source media="(prefers-color-scheme: dark)" srcset="/assets/actions-dark.webp" type="image/webp">
+            <source media="(prefers-color-scheme: dark)" srcset="/assets/actions-dark.png">
+            <source srcset="/assets/actions-light.webp" type="image/webp">
+            <img src="/assets/actions-light.png" width="340" height="39" loading="lazy" decoding="async"
+                 alt="The panel’s action row with Pull, Mark as seen and Open in Finder, above a repository row showing one commit behind and two ahead.">
+          </picture>
+        </figure>
+      </div>
+
+      <div class="row">
+        <div class="row-text">
+          <h3>Set it once and forget the app exists</h3>
+          <p class="prose">Check every 1 to 60 minutes, launch at login, notifications, the default <b>Open in</b> app, and the menu bar style with a live preview of your own repositories. Advanced holds the parts you touch once: which <span class="mono">git</span> binary to use, extra <span class="mono">PATH</span> entries so your credential helper is found, the fetch timeout, how many checks run at a time, and whether to probe with <span class="mono">ls-remote</span> before fetching.</p>
+        </div>
+        <figure class="row-media shot" id="settings-shot">
+          <picture>
+            <source media="(prefers-color-scheme: dark)" srcset="/assets/settings-dark.webp" type="image/webp">
+            <source media="(prefers-color-scheme: dark)" srcset="/assets/settings-dark.png">
+            <source srcset="/assets/settings-light.webp" type="image/webp">
+            <img src="/assets/settings-light.png" width="492" height="663" loading="lazy" decoding="async"
+                 alt="RepoBar Settings, General tab: check interval, launch at login, notifications, open repositories in, and the menu bar style with a live preview.">
+          </picture>
+        </figure>
+      </div>
+
+      <p class="beat">When something lands, you get one notification with <b>Open</b> and <b>Pull</b> on it. Repositories you would rather not hear from can be muted individually, and RepoBar never notifies you twice about the same commits.</p>
+    </div>
+  </section>
+
+  <!-- ── what it runs ─────────────────────────────────────────────────── -->
+  <section id="reads" class="band band--ink" data-node="4">
+    <div class="col">
+      <h2>It reads your repositories. It never writes to them.</h2>
+      <p class="prose">This is every command RepoBar runs on a check. There is no sixth one.</p>
+
+      <ol class="run">
+        <li>
+          <code>git status --porcelain=v2 --branch</code>
+          <p>Reads the branch, its upstream and the state of your working tree. It does not write the index.</p>
+        </li>
+        <li>
+          <code class="run-none">resolve the watched ref</code>
+          <p>Your branch’s upstream, then the remote’s default branch, then your per-repository override. No command, no network.</p>
+        </li>
+        <li>
+          <code>git ls-remote --heads origin main</code>
+          <p>Asks the remote for one branch tip. A few hundred bytes, no objects transferred.</p>
+        </li>
+        <li>
+          <code>git fetch --no-write-fetch-head --no-auto-maintenance origin</code>
+          <p>Only if that tip actually moved. Nothing is checked out, nothing is merged, and maintenance never runs.</p>
+        </li>
+        <li>
+          <code>git rev-list --left-right --count · git log HEAD..origin/main</code>
+          <p>Counts ahead and behind, and reads the commits you don’t have yet.</p>
+        </li>
+      </ol>
+
+      <ul class="promises">
+        <li><b>Your working tree is never touched.</b> No checkout, no merge, no stash, no <span class="mono">gc</span>. Pull is the only command that changes anything, and only when you press it.</li>
+        <li><b>It never asks you for credentials.</b> Checks run with <span class="mono">GIT_TERMINAL_PROMPT=0</span> and a non-interactive SSH setup, using the same keys, agent and credential helpers your terminal already uses.</li>
+        <li><b>It gives up quickly.</b> Every command has a hard timeout, authentication failures back off exponentially instead of retrying into a lockout, and one broken repository never slows the others down.</li>
+        <li><b>It knows when to stop.</b> Checks pause when you are offline or in Low Power Mode and resume after your Mac wakes. Worktrees that share a <span class="mono">.git</span> directory are never fetched at the same time.</li>
+        <li><b>Nothing leaves your Mac.</b> No backend, no account, no telemetry, no analytics, no crash reporter. This page doesn’t have any either.</li>
+        <li><b>You can check all of it.</b> MIT licensed, and the whole check pipeline is one file called <span class="mono">RepoChecker.swift</span>.</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ── install ──────────────────────────────────────────────────────── -->
+  <section id="install" class="band" data-node="5">
+    <div class="col">
+      <h2>Installing takes two minutes. Apple will interrupt once.</h2>
+
+      <div class="dl">
+        <a class="btn btn--lg" href="https://github.com/aliyar/repobar/releases/download/v0.1.0/RepoBar-0.1.0.zip">Download RepoBar 0.1.0</a>
+        <p class="dl-meta">3.4 MB · Universal (Apple Silicon and Intel) · macOS 14 or later</p>
+        <p class="dl-sha">SHA-256 <span class="mono">616fb26aa4423ef7c0aff2153bfbf8c2424f6f4ade2d93c788ce412de86bf3ac</span></p>
+      </div>
+
+      <ol class="steps">
+        <li><b>Download and unzip.</b> Double-clicking the <span class="mono">.zip</span> is enough.</li>
+        <li><b>Drag RepoBar.app into Applications.</b> RepoBar lives in the menu bar, so there is no Dock icon.</li>
+        <li><b>Open it once, and let macOS refuse.</b> You’ll see a dialog saying macOS cannot verify that the app is free of malware. That is macOS declining an app that hasn’t been notarized. It is not a corrupt download, and it is not a virus warning.</li>
+        <li><b>Open System Settings → Privacy &amp; Security.</b> Scroll to the message about RepoBar, click <b>Open Anyway</b>, then confirm.</li>
+        <li><b>Click the branch icon in your menu bar.</b> Add your first repository, or drop a folder onto the panel. Drop a folder that <i>contains</i> repositories and it adds all of them.</li>
+      </ol>
+
+      <p class="note" role="note">The <b>Open Anyway</b> button only appears for about an hour after the launch macOS blocked. If it isn’t there, open RepoBar again and it comes back.</p>
+
+      <p class="prose small">On macOS 14 the shorter route still works: right-click RepoBar.app → Open → Open. On macOS 15 and later Apple removed it, which is why the detour above exists.</p>
+
+      <div class="cmd">
+        <code id="xattr-cmd">xattr -dr com.apple.quarantine /Applications/RepoBar.app</code>
+        <button class="btn btn--ghost btn--sm" type="button" data-copy="#xattr-cmd">Copy</button>
+      </div>
+      <p class="prose small">Or remove the quarantine flag yourself and skip the detour entirely.</p>
+
+      <h3>Why isn’t it notarized?</h3>
+      <p class="prose">Notarization runs through an Apple Developer Program membership, and RepoBar is a free project that does not have one set up. That changes how you verify a release, not whether you can: every build is signed with an EdDSA key, its SHA-256 is published above, the complete source is on GitHub, and updates arrive through Sparkle with the signature checked before anything is installed. If you would rather trust your own machine than a download, clone the repository and run <span class="mono">make run</span>.</p>
+
+    </div>
+  </section>
+
+  <!-- ── faq ──────────────────────────────────────────────────────────── -->
+  <section id="faq" class="band band--alt" data-node="1">
+    <div class="col">
+      <h2>The things worth knowing before you download.</h2>
+      <div class="faq">
+        <details>
+          <summary>Does it touch my repositories?</summary>
+          <p>It reads them. A check runs <span class="mono">git status --porcelain=v2</span> for local state, then <span class="mono">git ls-remote</span> to see whether the branch tip moved, and only fetches when it did. Fetching writes to <span class="mono">.git</span>, exactly as <span class="mono">git fetch</span> in your terminal does, and nothing more. Your working tree, index, stash and branches are never modified, maintenance and <span class="mono">gc</span> never run, and submodules are left alone. The only command that changes your checkout is Pull, and only when you press it.</p>
+        </details>
+        <details>
+          <summary>Will it ask for my SSH passphrase or a token?</summary>
+          <p>No. Checks run non-interactively and use the same keys, ssh-agent and credential helpers your terminal does, including <span class="mono">core.sshCommand</span> and <span class="mono">insteadOf</span> rewrites. If a credential isn’t available the check fails, the dot becomes a ring, and RepoBar backs off instead of retrying you into a lockout. If your helper lives somewhere unusual, add its directory under Settings → Advanced.</p>
+        </details>
+        <details>
+          <summary>Which git hosts work?</summary>
+          <p>Any remote <span class="mono">git</span> itself can reach. RepoBar only talks to <span class="mono">git</span>, never to an API. Clickable commit links are built for GitHub (including Enterprise hostnames), GitLab, Bitbucket, Azure DevOps, Gitea, Forgejo, Codeberg and sourcehut. Other remotes still show the full commit list; the commits just aren’t links.</p>
+        </details>
+        <details>
+          <summary>How many repositories can it watch, and what does that cost my battery?</summary>
+          <p>As many as you like. Up to eight get their own dot; beyond that the menu bar shows only the ones with news plus a <span class="mono">+N</span>. A check is one <span class="mono">ls-remote</span> per repository, a few hundred bytes, and a fetch only when the tip actually moved. Checks are staggered, run a few at a time, and pause completely when you’re offline or in Low Power Mode.</p>
+        </details>
+        <details>
+          <summary>Where does it keep its data?</summary>
+          <p>Two JSON files in <span class="mono">~/Library/Application Support/RepoBar/</span>: your repository list and a cache of the last check. Delete them and RepoBar starts empty. Nothing is stored anywhere else, and nothing is sent anywhere.</p>
+        </details>
+        <details>
+          <summary>Is it really free, and what happens to it?</summary>
+          <p>Yes: MIT licensed, no paid tier, no upsell, no sponsor prompt in the app. It exists because its author wanted it on their own menu bar. The source is on GitHub; if it ever stops being maintained, you have every line of it.</p>
+        </details>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="foot">
+  <div class="col">
+    <div class="foot-grid">
+      <div>
+        <p class="foot-brand"><svg class="wordmark-mark" viewBox="0 0 14 14" aria-hidden="true"><use href="#glyph-branch"/></svg> RepoBar <span class="mono">0.1.0</span></p>
+        <p class="foot-note">Free software, provided as is, without warranty of any kind.</p>
+      </div>
+      <nav aria-label="Project">
+        <p class="foot-head">Project</p>
+        <ul>
+          <li><a href="https://github.com/aliyar/repobar" target="_blank" rel="noopener">GitHub repository</a></li>
+          <li><a href="https://github.com/aliyar/repobar/releases" target="_blank" rel="noopener">All releases</a></li>
+          <li><a href="https://github.com/aliyar/repobar/issues" target="_blank" rel="noopener">Report an issue</a></li>
+        </ul>
+      </nav>
+      <nav aria-label="Legal">
+        <p class="foot-head">Legal</p>
+        <ul>
+          <li><a href="/privacy/">Privacy</a></li>
+          <li><a href="/terms/">Terms</a></li>
+          <li><a href="/license/">License</a></li>
+        </ul>
+      </nav>
+      <div>
+        <p class="foot-head">This page</p>
+        <p class="foot-note">No analytics, no cookies, no third-party requests. Three files, hand-written.</p>
+      </div>
+    </div>
+    <p class="foot-legal">RepoBar is not affiliated with Apple, GitHub, GitLab or Atlassian. macOS is a trademark of Apple Inc.</p>
+  </div>
+</footer>
+
+<p class="vh" aria-live="polite" data-announce></p>
+
+<svg width="0" height="0" class="vh" aria-hidden="true" focusable="false">
+  <defs>
+    <symbol id="glyph-spinner" viewBox="0 0 14 14">
+      <rect x="6.4" y="1.1" width="1.2" height="3.6" rx=".6" fill="currentColor" opacity="1.00" transform="rotate(0 7 7)"/>
+      <rect x="6.4" y="1.1" width="1.2" height="3.6" rx=".6" fill="currentColor" opacity="0.92" transform="rotate(30 7 7)"/>
+      <rect x="6.4" y="1.1" width="1.2" height="3.6" rx=".6" fill="currentColor" opacity="0.84" transform="rotate(60 7 7)"/>
+      <rect x="6.4" y="1.1" width="1.2" height="3.6" rx=".6" fill="currentColor" opacity="0.76" transform="rotate(90 7 7)"/>
+      <rect x="6.4" y="1.1" width="1.2" height="3.6" rx=".6" fill="currentColor" opacity="0.68" transform="rotate(120 7 7)"/>
+      <rect x="6.4" y="1.1" width="1.2" height="3.6" rx=".6" fill="currentColor" opacity="0.60" transform="rotate(150 7 7)"/>
+      <rect x="6.4" y="1.1" width="1.2" height="3.6" rx=".6" fill="currentColor" opacity="0.52" transform="rotate(180 7 7)"/>
+      <rect x="6.4" y="1.1" width="1.2" height="3.6" rx=".6" fill="currentColor" opacity="0.44" transform="rotate(210 7 7)"/>
+      <rect x="6.4" y="1.1" width="1.2" height="3.6" rx=".6" fill="currentColor" opacity="0.36" transform="rotate(240 7 7)"/>
+      <rect x="6.4" y="1.1" width="1.2" height="3.6" rx=".6" fill="currentColor" opacity="0.28" transform="rotate(270 7 7)"/>
+      <rect x="6.4" y="1.1" width="1.2" height="3.6" rx=".6" fill="currentColor" opacity="0.20" transform="rotate(300 7 7)"/>
+      <rect x="6.4" y="1.1" width="1.2" height="3.6" rx=".6" fill="currentColor" opacity="0.13" transform="rotate(330 7 7)"/>
+    </symbol>
+    <symbol id="glyph-branch" viewBox="0 0 64 64">
+      <g fill="none" stroke="currentColor" stroke-width="6.6" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M32 50V34"/>
+        <path d="M32 34C32 28.5 24.6 27.4 19.6 22.4"/>
+        <path d="M32 34C32 28.5 39.4 27.4 44.4 22.4"/>
+      </g>
+      <path fill="currentColor" d="M12.6 15.4 23.07 16.53 13.73 25.87Z"/>
+      <path fill="currentColor" d="M51.4 15.4 50.27 25.87 40.93 16.53Z"/>
+    </symbol>
+    <symbol id="glyph-wifi" viewBox="0 0 24 24">
+      <g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 18l.01 0"/>
+        <path d="M9.172 15.172a4 4 0 0 1 5.656 0"/>
+        <path d="M6.343 12.343a8 8 0 0 1 11.314 0"/>
+        <path d="M3.515 9.515c4.686 -4.687 12.284 -4.687 17 0"/>
+      </g>
+    </symbol>
+    <symbol id="glyph-battery" viewBox="0 0 24 24">
+      <g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M6 7h11a2 2 0 0 1 2 2v.5a.5 .5 0 0 0 .5 .5a.5 .5 0 0 1 .5 .5v3a.5 .5 0 0 1 -.5 .5a.5 .5 0 0 0 -.5 .5v.5a2 2 0 0 1 -2 2h-11a2 2 0 0 1 -2 -2v-6a2 2 0 0 1 2 -2"/>
+        <path d="M7 10l0 4"/>
+        <path d="M10 10l0 4"/>
+        <path d="M13 10l0 4"/>
+      </g>
+    </symbol>
+    <symbol id="glyph-settings" viewBox="0 0 24 24">
+      <g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M10.325 4.317c.426 -1.756 2.924 -1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543 -.94 3.31 .826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756 .426 1.756 2.924 0 3.35a1.724 1.724 0 0 0 -1.066 2.573c.94 1.543 -.826 3.31 -2.37 2.37a1.724 1.724 0 0 0 -2.572 1.065c-.426 1.756 -2.924 1.756 -3.35 0a1.724 1.724 0 0 0 -2.573 -1.066c-1.543 .94 -3.31 -.826 -2.37 -2.37a1.724 1.724 0 0 0 -1.065 -2.572c-1.756 -.426 -1.756 -2.924 0 -3.35a1.724 1.724 0 0 0 1.066 -2.573c-.94 -1.543 .826 -3.31 2.37 -2.37c1 .608 2.296 .07 2.572 -1.065"/>
+        <path d="M9 12a3 3 0 1 0 6 0a3 3 0 0 0 -6 0"/>
+      </g>
+    </symbol>
+    <symbol id="glyph-refresh" viewBox="0 0 24 24">
+      <g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M20 11a8.1 8.1 0 0 0 -15.5 -2m-.5 -4v4h4"/>
+        <path d="M4 13a8.1 8.1 0 0 0 15.5 2m.5 4v-4h-4"/>
+      </g>
+    </symbol>
+    <symbol id="glyph-sun" viewBox="0 0 24 24">
+      <g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M8 12a4 4 0 1 0 8 0a4 4 0 1 0 -8 0"/>
+        <path d="M3 12h1m8 -9v1m8 8h1m-9 8v1m-6.4 -15.4l.7 .7m12.1 -.7l-.7 .7m0 11.4l.7 .7m-12.1 -.7l-.7 .7"/>
+      </g>
+    </symbol>
+    <symbol id="glyph-moon" viewBox="0 0 24 24">
+      <g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454l0 .008"/>
+      </g>
+    </symbol>
+    <symbol id="glyph-chevron" viewBox="0 0 24 24">
+      <g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M9 6l6 6l-6 6"/>
+      </g>
+    </symbol>
+    <symbol id="glyph-caret" viewBox="0 0 24 24">
+      <g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M6 9l6 6l6 -6"/>
+      </g>
+    </symbol>
+    <symbol id="glyph-open" viewBox="0 0 24 24">
+      <g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 6h-6a2 2 0 0 0 -2 2v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-6"/>
+        <path d="M11 13l9 -9"/>
+        <path d="M15 4h5v5"/>
+      </g>
+    </symbol>
+    <symbol id="glyph-check" viewBox="0 0 24 24">
+      <path d="M5 12l5 5l10 -10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
+    <symbol id="glyph-plus" viewBox="0 0 24 24">
+      <g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 5l0 14"/>
+        <path d="M5 12l14 0"/>
+      </g>
+    </symbol>
+    <symbol id="glyph-pause" viewBox="0 0 24 24">
+      <g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 12a9 9 0 1 0 18 0a9 9 0 1 0 -18 0"/>
+        <path d="M10 9v6"/>
+        <path d="M14 9v6"/>
+      </g>
+    </symbol>
+    <symbol id="glyph-play" viewBox="0 0 24 24">
+      <g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 12a9 9 0 1 0 18 0a9 9 0 1 0 -18 0"/>
+        <path d="M10 8.5v7l6 -3.5z"/>
+      </g>
+    </symbol>
+  </defs>
+</svg>
+
+<script src="/main.js" defer></script>
+</body>
+</html>
