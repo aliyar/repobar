@@ -5,6 +5,7 @@ struct RepoListView: View {
     @Environment(AppModel.self) private var model
     @Environment(PanelUIState.self) private var ui
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.staticLayout) private var staticLayout
     @State private var contentHeight: CGFloat = 0
     @FocusState private var searchFocused: Bool
 
@@ -36,26 +37,35 @@ struct RepoListView: View {
                     .keyboardShortcut("f", modifiers: .command)
                     .frame(width: 0, height: 0).opacity(0).accessibilityHidden(true)
             }
-            ScrollView {
-                LazyVStack(spacing: 1) {
-                    ForEach(items) { item in
-                        if ui.confirmingRemoval == item.id {
-                            RemovalConfirmation(item: item)
-                        } else {
-                            RepoRow(item: item)
+            if staticLayout {
+                rows(items).padding(.horizontal, 6).padding(.vertical, 6)
+            } else {
+                ScrollView {
+                    rows(items)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 6)
+                        .animation(reduceMotion ? nil : .spring(duration: 0.28, bounce: 0.1), value: items.map(\.id))
+                        .onGeometryChange(for: CGFloat.self) { proxy in
+                            proxy.size.height
+                        } action: { height in
+                            contentHeight = height
                         }
-                    }
                 }
-                .padding(.horizontal, 6)
-                .padding(.vertical, 6)
-                .animation(reduceMotion ? nil : .spring(duration: 0.28, bounce: 0.1), value: items.map(\.id))
-                .onGeometryChange(for: CGFloat.self) { proxy in
-                    proxy.size.height
-                } action: { height in
-                    contentHeight = height
+                .frame(height: min(max(contentHeight, 44), Self.maxHeight))
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func rows(_ items: [RepoItem]) -> some View {
+        LazyVStack(spacing: 1) {
+            ForEach(items) { item in
+                if ui.confirmingRemoval == item.id {
+                    RemovalConfirmation(item: item)
+                } else {
+                    RepoRow(item: item)
                 }
             }
-            .frame(height: min(max(contentHeight, 44), Self.maxHeight))
         }
     }
 }

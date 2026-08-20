@@ -85,10 +85,11 @@ final class AppModel {
         }
         if !isOnline { return "Offline — will retry" }
         if isRefreshing { return "Checking…" }
-        if errorCount > 0 { return "Check failed for \(errorCount) \(errorCount == 1 ? "repository" : "repositories")" }
         if records.isEmpty { return "No repositories" }
         let changed = unseenRepoCount
-        if changed > 0 { return "\(changed) of \(records.count) \(records.count == 1 ? "repository has" : "repositories have") new commits" }
+        let failed = errorCount > 0 ? " · \(errorCount) failed" : ""
+        if changed > 0 { return "\(changed) of \(records.count) \(records.count == 1 ? "repository has" : "repositories have") new commits" + failed }
+        if errorCount > 0 { return "Check failed for \(errorCount) \(errorCount == 1 ? "repository" : "repositories")" }
         return "All up to date"
     }
 
@@ -370,10 +371,25 @@ final class AppModel {
         }
     }
 
-    // MARK: - Preview
+    // MARK: - Previews & screenshots
 
-    static func preview() -> AppModel {
-        let model = AppModel(engine: RepoEngine(persistence: RepoPersistence(directory: FileManager.default.temporaryDirectory.appendingPathComponent("repobar-preview"))), settings: AppSettings(defaults: UserDefaults(suiteName: "preview")!))
+    /// Replaces the live state with canned data (no engine involved).
+    func installPreviewData(records: [RepoRecord], snapshots: [RepoID: RepoSnapshot], lastRefresh: Date = Date()) {
+        self.records = records
+        self.snapshots = snapshots
+        self.checking = []
+        self.lastRefresh = lastRefresh
+        self.gitInstallation = GitInstallation(url: URL(fileURLWithPath: "/opt/homebrew/bin/git"), version: "2.50.1", major: 2, minor: 50, patch: 1)
+        self.gitDiscoveryFinished = true
+    }
+
+    static func preview(sample: Bool = true) -> AppModel {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("repobar-preview-\(UUID().uuidString)")
+        let model = AppModel(engine: RepoEngine(persistence: RepoPersistence(directory: directory)), settings: AppSettings(defaults: UserDefaults(suiteName: "com.aliyar.RepoBar.preview")!))
+        if sample {
+            let data = SampleData.make()
+            model.installPreviewData(records: data.records, snapshots: data.snapshots)
+        }
         return model
     }
 }
