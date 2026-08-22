@@ -6,25 +6,8 @@ INSTALL
 
 1. Unzip this file (double-click it).
 2. Drag RepoBar.app into your Applications folder.
-3. The app is not notarized by Apple, so the first open needs one extra step.
-
-   macOS 14 (Sonoma):
-
-     Right-click RepoBar.app  →  Open  →  Open
-
-   macOS 15 (Sequoia) and later:
-
-     Double-click RepoBar.app once (macOS will refuse), then open
-     System Settings  →  Privacy & Security, scroll down and click
-     "Open Anyway" next to the RepoBar message, then confirm with "Open".
-
-   The warning says the app "is damaged", "cannot be opened" or that Apple
-   "could not verify" it. That is macOS refusing an unsigned download, not a
-   broken file. The extra step is needed only once.
-
-   If macOS still refuses, run this in Terminal:
-
-     xattr -dr com.apple.quarantine /Applications/RepoBar.app
+3. Open it. This build is signed with a Developer ID certificate and
+   notarized by Apple, so macOS opens it without a warning.
 
 ────────────────────────────────────────────────────────────
 FIRST RUN

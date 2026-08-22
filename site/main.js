@@ -259,32 +259,4 @@
       head.classList.toggle("is-stuck", !entries[0].isIntersecting);
     }, { threshold: 0 }).observe(sentinel);
   }
-
-  /* ── 4. copy the quarantine command ───────────────────────────────────── */
-  [].forEach.call(document.querySelectorAll("[data-copy]"), function (btn) {
-    var source = document.querySelector(btn.getAttribute("data-copy"));
-    if (!source) return;
-    var original = btn.textContent;
-    btn.addEventListener("click", function () {
-      var text = source.textContent.trim();
-      var done = function () {
-        btn.textContent = "Copied";
-        say("Command copied to clipboard.");
-        window.setTimeout(function () { btn.textContent = original; }, 1600);
-      };
-      var fallback = function () {
-        var range = document.createRange();
-        range.selectNodeContents(source);
-        var selection = window.getSelection();
-        selection.removeAllRanges();
-        selection.addRange(range);
-        btn.textContent = "Press ⌘C";
-        say("Command selected. Press Command C to copy.");
-        window.setTimeout(function () { btn.textContent = original; }, 2400);
-      };
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(text).then(done, fallback);
-      } else { fallback(); }
-    });
-  });
 })();

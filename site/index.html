@@ -277,7 +277,7 @@
       <ul class="req" aria-label="Requirements">
         <li>0.1.1</li><li>3.4 MB</li><li>macOS 14 or later</li><li>Apple Silicon and Intel</li><li>MIT</li>
       </ul>
-      <p class="req-note"><a href="#install">Not notarized, so the first launch needs one extra step. Here is exactly what it looks like.</a></p>
+      <p class="req-note"><a href="#install">Signed with a Developer ID certificate and notarized by Apple, so it opens without a warning.</a></p>
       </div>
 
       <figure class="shot shot--panel">
@@ -435,7 +435,7 @@
   <!-- ── install ──────────────────────────────────────────────────────── -->
   <section id="install" class="band" data-node="5">
     <div class="col">
-      <h2>Installing takes two minutes. Apple will interrupt once.</h2>
+      <h2>Installing takes a minute. macOS will not interrupt.</h2>
 
       <div class="dl">
         <a class="btn btn--lg" href="https://github.com/aliyar/repobar/releases/download/v0.1.1/RepoBar-0.1.1.zip">Download RepoBar 0.1.1</a>
@@ -445,24 +445,12 @@
 
       <ol class="steps">
         <li><b>Download and unzip.</b> Double-clicking the <span class="mono">.zip</span> is enough.</li>
-        <li><b>Drag RepoBar.app into Applications.</b> RepoBar lives in the menu bar, so there is no Dock icon.</li>
-        <li><b>Open it once, and let macOS refuse.</b> You’ll see a dialog saying macOS cannot verify that the app is free of malware. That is macOS declining an app that hasn’t been notarized. It is not a corrupt download, and it is not a virus warning.</li>
-        <li><b>Open System Settings → Privacy &amp; Security.</b> Scroll to the message about RepoBar, click <b>Open Anyway</b>, then confirm.</li>
+        <li><b>Drag RepoBar.app into Applications and open it.</b> RepoBar lives in the menu bar, so there is no Dock icon.</li>
         <li><b>Click the branch icon in your menu bar.</b> Add your first repository, or drop a folder onto the panel. Drop a folder that <i>contains</i> repositories and it adds all of them.</li>
       </ol>
 
-      <p class="note" role="note">The <b>Open Anyway</b> button only appears for about an hour after the launch macOS blocked. If it isn’t there, open RepoBar again and it comes back.</p>
-
-      <p class="prose small">On macOS 14 the shorter route still works: right-click RepoBar.app → Open → Open. On macOS 15 and later Apple removed it, which is why the detour above exists.</p>
-
-      <div class="cmd">
-        <code id="xattr-cmd">xattr -dr com.apple.quarantine /Applications/RepoBar.app</code>
-        <button class="btn btn--ghost btn--sm" type="button" data-copy="#xattr-cmd">Copy</button>
-      </div>
-      <p class="prose small">Or remove the quarantine flag yourself and skip the detour entirely.</p>
-
-      <h3>Why isn’t it notarized?</h3>
-      <p class="prose">Notarization runs through an Apple Developer Program membership, and RepoBar is a free project that does not have one set up. That changes how you verify a release, not whether you can: every build is signed with an EdDSA key, its SHA-256 is published above, the complete source is on GitHub, and updates arrive through Sparkle with the signature checked before anything is installed. If you would rather trust your own machine than a download, clone the repository and run <span class="mono">make run</span>.</p>
+      <h3>How you can check what you downloaded</h3>
+      <p class="prose">Every release is signed with a Developer ID certificate and notarized by Apple, so macOS opens it without a detour and can tell that nothing changed in the app since it was built. That is the floor, not the whole story: the SHA-256 of the download is printed above, updates arrive through Sparkle with an EdDSA signature verified before anything is installed, and the complete source is on GitHub. If you would rather trust your own machine than a download, clone the repository and run <span class="mono">make run</span>.</p>
 
     </div>
   </section>

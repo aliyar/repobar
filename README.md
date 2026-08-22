@@ -116,12 +116,9 @@ concurrently. Everything stays on your Mac: RepoBar has no backend, no telemetry
 1. Download `RepoBar-<version>.zip` from the [latest release](https://github.com/aliyar/repobar/releases/latest)
    and unzip it.
 2. Drag `RepoBar.app` to `/Applications` and open it. RepoBar lives in the menu bar — there is no Dock icon.
-3. The app is not notarized, so macOS asks for one extra step on first launch:
-   - **macOS 14:** right-click `RepoBar.app` → *Open* → *Open*.
-   - **macOS 15 and later:** open it once (macOS refuses), then *System Settings → Privacy & Security → Open Anyway*.
-   - Still blocked? `xattr -dr com.apple.quarantine /Applications/RepoBar.app`
 
-   The release also ships an `install.txt` with these steps.
+Releases are signed with a Developer ID certificate and notarized by Apple, so macOS opens them without a
+warning. The release also ships an `install.txt` with these steps.
 
 **Requirements:** macOS 14 (Sonoma) or later and a `git` binary — Homebrew's or the one from the Xcode
 Command Line Tools. RepoBar finds it automatically and never triggers the "install developer tools" dialog.
@@ -153,9 +150,9 @@ make release VERSION=1.2.3 [NOTES=notes.md] [FLAGS="--draft"]
 make release-dry VERSION=1.2.3      # build dist/ only, no git or GitHub
 ```
 
-`Scripts/release.sh` bumps the version in `project.yml`, builds a Release app (ad-hoc signed, or Developer ID +
-notarization when a certificate and `NOTARY_PROFILE` are available), zips it with `install.txt`, signs the
-archive with the Sparkle EdDSA key, writes `appcast.xml`, commits and tags `vX.Y.Z`, pushes, and publishes a
+`Scripts/release.sh` bumps the version in `project.yml`, builds a Release app (Developer ID signed and
+notarized — it falls back to ad-hoc signing when no certificate is installed), zips it with `install.txt`,
+signs the archive with the Sparkle EdDSA key, writes `appcast.xml`, commits and tags `vX.Y.Z`, pushes, and publishes a
 GitHub release with the zip, `install.txt` and `appcast.xml`. Running apps pick the update up from
 `https://github.com/aliyar/repobar/releases/latest/download/appcast.xml`.
 

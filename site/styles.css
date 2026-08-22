@@ -831,18 +831,6 @@ h3 {
   background: var(--accent-quiet); border-radius: var(--radius);
   font-size: 15px; color: var(--text); max-width: 62ch;
 }
-.cmd {
-  display: flex; align-items: center; gap: var(--s3); flex-wrap: wrap;
-  margin-top: var(--s8); padding: var(--s3) var(--s4);
-  background: var(--ink); border-radius: var(--radius); max-width: 62ch;
-}
-.cmd code {
-  font-family: var(--font-mono); font-size: 13px; color: var(--on-ink);
-  overflow-wrap: anywhere; flex: 1 1 auto;
-}
-.cmd .btn--ghost { color: var(--on-ink); box-shadow: inset 0 0 0 1px rgba(255,255,255,.22); }
-.cmd .btn--ghost:hover { background: rgba(255,255,255,.08); color: var(--on-ink); }
-
 /* ── faq ───────────────────────────────────────────────────────────────── */
 .faq { margin-top: var(--s10); border-top: 1px solid var(--hairline); max-width: 68ch; }
 .faq details { border-bottom: 1px solid var(--hairline); }
@@ -931,7 +919,6 @@ h3 {
   :root { --gutter: 76px; --rail-gap: 13px; --rail-0: 10px; --cap-top: 84px; --cap-size: 9px; }
   .menubar--loupe { --mb: 3.2; }
   .states { grid-template-columns: repeat(3, 1fr); gap: var(--s8); }
-  .cmd { flex-wrap: nowrap; }
   .foot-grid { grid-template-columns: repeat(2, 1fr); }
   .styles-row { grid-template-columns: 96px 1fr 1fr; gap: var(--s4); }
   .menubar--real { padding-inline: 16px; }
