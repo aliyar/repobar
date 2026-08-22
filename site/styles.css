@@ -700,9 +700,6 @@ h1 {
   font-size: 12.5px; color: var(--text-3); letter-spacing: -.01em;
 }
 .req li + li::before { content: "·"; margin-right: 10px; color: var(--hairline-strong); }
-.req-note { margin-top: var(--s3); font-size: 14px; color: var(--text-2); max-width: 52ch; }
-.req-note a { color: var(--text-2); text-decoration-color: var(--hairline-strong); text-underline-offset: .2em; }
-.req-note a:hover { color: var(--text); }
 
 .shot img { border-radius: 12px; box-shadow: var(--shadow-frame); }
 .shot figcaption { margin-top: var(--s3); font-size: 12.5px; color: var(--text-3); font-family: var(--font-mono); }
