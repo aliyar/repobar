@@ -78,6 +78,14 @@ fi
 step "Setting version $VERSION"
 mkdir -p build && cp project.yml build/project.yml.before-release
 cp site/index.html build/index.html.before-release
+# A dry run must never leave the bumped version behind, not even when a later step fails.
+restore_version() {
+  cp build/project.yml.before-release project.yml
+  cp build/index.html.before-release site/index.html
+  git checkout -q -- site/sitemap.xml 2>/dev/null || true
+  xcodegen generate --quiet
+}
+[[ $DRY_RUN -eq 1 ]] && trap restore_version EXIT
 PREV_BUILD=$(sed -n 's/^ *CURRENT_PROJECT_VERSION: "\([0-9]*\)".*/\1/p' project.yml | head -1)
 BUILD=$(( ${PREV_BUILD:-0} + 1 ))
 sed -i '' "s/^\( *MARKETING_VERSION: \)\"[^\"]*\"/\1\"$VERSION\"/" project.yml
@@ -92,11 +100,13 @@ SIGN_MODE="ad-hoc"
 DEVELOPER_ID=$(security find-identity -v -p codesigning 2>/dev/null | sed -n 's/.*"\(Developer ID Application: [^"]*\)".*/\1/p' | head -1)
 if [[ $FORCE_ADHOC -eq 0 && -n "$DEVELOPER_ID" ]]; then
   SIGN_MODE="Developer ID"
-  SIGN_ARGS=(CODE_SIGN_STYLE=Manual "CODE_SIGN_IDENTITY=$DEVELOPER_ID" OTHER_CODE_SIGN_FLAGS=--timestamp)
+  SIGN_ARGS=(CODE_SIGN_STYLE=Manual "CODE_SIGN_IDENTITY=$DEVELOPER_ID" OTHER_CODE_SIGN_FLAGS=--timestamp
+            CODE_SIGN_INJECT_BASE_ENTITLEMENTS=NO)
 else
   # Ad-hoc signatures carry no Team ID, so the hardened runtime's library validation would reject the
   # embedded Sparkle.framework. Hardened runtime is only required for notarization (Developer ID path).
-  SIGN_ARGS=(CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY=- DEVELOPMENT_TEAM= PROVISIONING_PROFILE_SPECIFIER= ENABLE_HARDENED_RUNTIME=NO)
+  SIGN_ARGS=(CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY=- DEVELOPMENT_TEAM= PROVISIONING_PROFILE_SPECIFIER=
+            ENABLE_HARDENED_RUNTIME=NO CODE_SIGN_INJECT_BASE_ENTITLEMENTS=NO)
 fi
 
 # ---------- build ----------
@@ -107,6 +117,24 @@ xcodebuild -project $APP_NAME.xcodeproj -scheme $APP_NAME -configuration Release
 APP="$DERIVED/Build/Products/Release/$APP_NAME.app"
 [[ -d "$APP" ]] || die "build product not found at $APP"
 
+# Sparkle's binary distribution ships Updater.app, Autoupdate and the XPC services ad-hoc signed, and
+# Xcode only re-signs the framework bundle around them. Notarization rejects every one of them, so sign
+# the nested code inside-out and then the app again (touching nested code voids the outer signature).
+if [[ "$SIGN_MODE" == "Developer ID" ]]; then
+  step "Re-signing the embedded Sparkle helpers"
+  SPARKLE="$APP/Contents/Frameworks/Sparkle.framework/Versions/B"
+  [[ -d "$SPARKLE" ]] || die "Sparkle.framework has no Versions/B — check the layout before signing"
+  for nested in "$SPARKLE/XPCServices/Downloader.xpc" "$SPARKLE/XPCServices/Installer.xpc" \
+                "$SPARKLE/Updater.app" "$SPARKLE/Autoupdate"; do
+    [[ -e "$nested" ]] || continue
+    codesign --force --options runtime --timestamp --preserve-metadata=entitlements \
+      --sign "$DEVELOPER_ID" "$nested" 2>&1 | sed 's/^/  /'
+  done
+  codesign --force --options runtime --timestamp --sign "$DEVELOPER_ID" "$SPARKLE" 2>&1 | sed 's/^/  /'
+  codesign --force --options runtime --timestamp --entitlements Supporting/RepoBar.entitlements \
+    --sign "$DEVELOPER_ID" "$APP" 2>&1 | sed 's/^/  /'
+fi
+
 step "Verifying build"
 codesign --verify --deep --strict "$APP" || die "code signature is invalid"
 PLIST="$APP/Contents/Info.plist"
@@ -114,7 +142,7 @@ BUILT_VERSION=$(plutil -extract CFBundleShortVersionString raw "$PLIST")
 [[ "$BUILT_VERSION" == "$VERSION" ]] || die "built version $BUILT_VERSION != $VERSION"
 [[ -n "$(plutil -extract SUPublicEDKey raw "$PLIST")" ]] || die "SUPublicEDKey missing from Info.plist"
 [[ -d "$APP/Contents/Frameworks/Sparkle.framework" ]] || die "Sparkle.framework is not embedded"
-AUTHORITY=$(codesign -dv "$APP" 2>&1 | sed -n 's/^Authority=//p' | head -1)
+AUTHORITY=$(codesign -dv --verbose=2 "$APP" 2>&1 | sed -n 's/^Authority=//p' | head -1)
 echo "  $APP_NAME $BUILT_VERSION ($(plutil -extract CFBundleVersion raw "$PLIST")), signed by ${AUTHORITY:-ad-hoc identity}"
 
 # ---------- package ----------
@@ -134,7 +162,12 @@ Scripts/site-version.sh "$VERSION" "$ZIP" "$REPO"
 
 if [[ "$SIGN_MODE" == "Developer ID" && -n "${NOTARY_PROFILE:-}" ]]; then
   step "Notarizing"
-  xcrun notarytool submit "$ZIP" --keychain-profile "$NOTARY_PROFILE" --wait
+  xcrun notarytool submit "$ZIP" --keychain-profile "$NOTARY_PROFILE" --wait \
+    --output-format json > "$DIST/.notary.json" || true
+  NOTARY_STATUS=$(python3 -c "import json;d=json.load(open('$DIST/.notary.json'));print(d.get('status',''))")
+  NOTARY_ID=$(python3 -c "import json;d=json.load(open('$DIST/.notary.json'));print(d.get('id',''))")
+  echo "  submission $NOTARY_ID: $NOTARY_STATUS"
+  [[ "$NOTARY_STATUS" == "Accepted" ]] || die "notarization $NOTARY_STATUS — see: xcrun notarytool log $NOTARY_ID --keychain-profile $NOTARY_PROFILE"
   mkdir -p "$STAGE"; ditto -x -k "$ZIP" "$STAGE"
   xcrun stapler staple "$STAGE/$APP_NAME.app"
   rm "$ZIP"; ditto -c -k --norsrc "$STAGE" "$ZIP"; rm -rf "$STAGE"
@@ -191,11 +224,7 @@ if [[ -n "$NOTES_FILE" || $DRY_RUN -eq 1 ]]; then
 fi
 
 if [[ $DRY_RUN -eq 1 ]]; then
-  step "Dry run complete (version bump reverted)"
-  cp build/project.yml.before-release project.yml
-  cp build/index.html.before-release site/index.html
-  git checkout -q -- site/sitemap.xml 2>/dev/null || true
-  xcodegen generate --quiet
+  step "Dry run complete (version bump reverted on exit)"
   ls -la "$DIST"
   exit 0
 fi
