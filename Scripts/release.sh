@@ -156,10 +156,6 @@ cp "$STAGE/install.txt" "$DIST/install.txt"
 ditto -c -k --norsrc "$STAGE" "$ZIP"
 rm -rf "$STAGE"
 
-# ---------- landing page ----------
-step "Pointing the landing page at $TAG"
-Scripts/site-version.sh "$VERSION" "$ZIP" "$REPO"
-
 if [[ "$SIGN_MODE" == "Developer ID" && -n "${NOTARY_PROFILE:-}" ]]; then
   step "Notarizing"
   xcrun notarytool submit "$ZIP" --keychain-profile "$NOTARY_PROFILE" --wait \
@@ -173,6 +169,12 @@ if [[ "$SIGN_MODE" == "Developer ID" && -n "${NOTARY_PROFILE:-}" ]]; then
   rm "$ZIP"; ditto -c -k --norsrc "$STAGE" "$ZIP"; rm -rf "$STAGE"
 fi
 echo "  $(du -h "$ZIP" | cut -f1) $ZIP"
+
+# ---------- landing page ----------
+# After notarization, never before: stapling rewrites the archive, so the checksum the page
+# publishes has to be taken from the file that actually ships.
+step "Pointing the landing page at $TAG"
+Scripts/site-version.sh "$VERSION" "$ZIP" "$REPO"
 
 # ---------- release notes → HTML for the appcast ----------
 notes_to_html() {  # markdown-ish text on stdin → simple HTML on stdout
