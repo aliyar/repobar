@@ -177,31 +177,53 @@ step "Pointing the landing page at $TAG"
 Scripts/site-version.sh "$VERSION" "$ZIP" "$REPO"
 
 # ---------- release notes → HTML for the appcast ----------
-notes_to_html() {  # markdown-ish text on stdin → simple HTML on stdout
-  python3 - <<'PY'
+notes_to_html() {  # markdown-ish file in $1 → simple HTML on stdout
+  python3 - "$1" <<'PY'
 import html, re, sys
-out, in_list = [], False
-for raw in sys.stdin.read().splitlines():
-    line = raw.rstrip()
-    if in_list and not line.lstrip().startswith(("- ", "* ")):
-        out.append("</ul>"); in_list = False
-    if not line.strip():
-        continue
-    text = html.escape(line.strip())
+
+def inline(text):
+    text = html.escape(text)
     text = re.sub(r"`([^`]+)`", r"<code>\1</code>", text)
     text = re.sub(r"\*\*([^*]+)\*\*", r"<b>\1</b>", text)
-    text = re.sub(r"\[([^\]]+)\]\((https?://[^)]+)\)", r'<a href="\2">\1</a>', text)
-    if line.startswith("#"):
+    return re.sub(r"\[([^\]]+)\]\((https?://[^)]+)\)", r'<a href="\2">\1</a>', text)
+
+out, para = [], []
+in_list = False
+
+def flush_para():
+    # Wrapped source lines belong to one paragraph, the way markdown reads them.
+    if para:
+        out.append(f"<p>{inline(' '.join(para))}</p>")
+        para.clear()
+
+def close_list():
+    global in_list
+    if in_list:
+        out.append("</ul>")
+        in_list = False
+
+for raw in open(sys.argv[1], encoding="utf-8").read().splitlines():
+    line = raw.strip()
+    if not line:
+        flush_para()
+        close_list()
+    elif line.startswith("#"):
+        flush_para()
+        close_list()
         level = min(len(line) - len(line.lstrip("#")), 3)
-        out.append(f"<h{level + 1}>{text.lstrip('# ').strip()}</h{level + 1}>")
-    elif line.lstrip().startswith(("- ", "* ")):
+        out.append(f"<h{level + 1}>{inline(line.lstrip('# ').strip())}</h{level + 1}>")
+    elif line.startswith(("- ", "* ")):
+        flush_para()
         if not in_list:
-            out.append("<ul>"); in_list = True
-        out.append(f"<li>{text[2:].strip()}</li>")
+            out.append("<ul>")
+            in_list = True
+        out.append(f"<li>{inline(line[2:].strip())}</li>")
     else:
-        out.append(f"<p>{text}</p>")
-if in_list:
-    out.append("</ul>")
+        close_list()
+        para.append(line)
+
+flush_para()
+close_list()
 print("\n".join(out))
 PY
 }
@@ -209,7 +231,7 @@ PY
 make_appcast() {
   local notes_md="$1"
   if [[ -n "$notes_md" ]]; then
-    notes_to_html < "$notes_md" > "$DIST/$APP_NAME-$VERSION.html"
+    notes_to_html "$notes_md" > "$DIST/$APP_NAME-$VERSION.html"
   fi
   "$SPARKLE_BIN/generate_appcast" \
     --download-url-prefix "$DOWNLOAD_PREFIX" \
