@@ -44,21 +44,29 @@ struct RepoListView: View {
                     rows(items)
                         .padding(.horizontal, 6)
                         .padding(.vertical, 6)
-                        .animation(reduceMotion ? nil : .spring(duration: 0.28, bounce: 0.1), value: items.map(\.id))
                         .onGeometryChange(for: CGFloat.self) { proxy in
                             proxy.size.height
                         } action: { height in
+                            // The scroll view's own height is derived from this measurement, so an
+                            // unfiltered write can ping-pong between two heights and never settle.
+                            guard abs(height - contentHeight) > 0.5 else { return }
                             contentHeight = height
                         }
                 }
                 .frame(height: min(max(contentHeight, 44), Self.maxHeight))
+                // Applied outside the measured content on purpose: animating the content itself
+                // reports a new height on every frame, which feeds the measurement above.
+                .animation(reduceMotion ? nil : .spring(duration: 0.28, bounce: 0.1), value: items.map(\.id))
             }
         }
     }
 
     @ViewBuilder
     private func rows(_ items: [RepoItem]) -> some View {
-        LazyVStack(spacing: 1) {
+        // A plain VStack on purpose. A LazyVStack sizes itself from the visible rect, which makes
+        // the measured height depend on the scroll view's frame — and that frame comes from the
+        // measurement, closing a layout feedback loop that spins the main thread forever.
+        VStack(spacing: 1) {
             ForEach(items) { item in
                 if ui.confirmingRemoval == item.id {
                     RemovalConfirmation(item: item)
