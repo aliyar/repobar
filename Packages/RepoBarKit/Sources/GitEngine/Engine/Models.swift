@@ -176,6 +176,13 @@ public struct RepoSnapshot: Codable, Sendable, Hashable {
     public var ahead: Int { comparison?.ahead ?? 0 }
     public var hasUnseen: Bool { unseenCount > 0 }
 
+    /// Everything acknowledging a repository does to its snapshot, in one place: the count
+    /// goes to zero and no incoming commit is new any more.
+    public mutating func markEverythingSeen() {
+        unseenCount = 0
+        for index in incoming.indices { incoming[index].isNew = false }
+    }
+
     // Hand-written like RepoRecord and RepoState: the synthesized decoder throws on a
     // key that a previously written state.json does not have, which would drop every
     // stored snapshot the first time a field is added.

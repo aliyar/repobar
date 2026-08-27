@@ -26,7 +26,7 @@ public enum GitError: Error, Sendable {
         case .launchFailed(.executableNotFound): .gitNotFound
         case .launchFailed(.workingDirectoryMissing): .repoMissing
         case .launchFailed(.launchFailed(let message)): .unknown(message)
-        case .timedOut(_, let after): .timeout(seconds: Int(after.components.seconds))
+        case .timedOut(_, let after): .timeout(seconds: Int(after.seconds))
         case .failed(_, let stderr, _): GitErrorClassifier.classify(stderr: stderr)
         }
     }
@@ -94,7 +94,7 @@ public struct GitClient: Sendable {
 
 extension Duration {
     var formattedMilliseconds: String {
-        let ms = Double(components.seconds) * 1000 + Double(components.attoseconds) / 1e15
+        let ms = seconds * 1000
         return String(format: "%.0f ms", ms)
     }
 }

@@ -73,13 +73,26 @@ public struct GitLocator: Sendable {
     }
 
     public func locate(override: URL?) async -> GitInstallation? {
-        for candidate in await candidates(override: override) {
+        // The fixed candidates cover almost every Mac, so the xcode-select subprocess is only
+        // paid for when none of them worked — `candidates` runs it eagerly.
+        var tried = Set<String>()
+        for candidate in fixedList(override: override) where tried.insert(candidate.path).inserted {
             guard fileManager.isExecutableFile(atPath: candidate.path) else { continue }
-            if let installation = await probe(candidate), installation.isSupported {
-                return installation
-            }
+            if let installation = await probe(candidate), installation.isSupported { return installation }
         }
-        return nil
+        guard let developerDir = await xcodeSelectPath() else { return nil }
+        let fallback = developerDir.appending(path: "usr/bin/git")
+        guard tried.insert(fallback.path).inserted, fileManager.isExecutableFile(atPath: fallback.path),
+              let installation = await probe(fallback), installation.isSupported else { return nil }
+        return installation
+    }
+
+    private func fixedList(override: URL?) -> [URL] {
+        var result: [URL] = []
+        if let override { result.append(override) }
+        result += extraCandidates
+        result += Self.fixedCandidates.map { URL(fileURLWithPath: $0) }
+        return result
     }
 
     /// Runs `git --version` with a short timeout.

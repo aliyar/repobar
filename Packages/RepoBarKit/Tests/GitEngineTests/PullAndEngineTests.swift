@@ -255,6 +255,27 @@ struct RepoEngineTests {
         await collector.stop()
     }
 
+    /// Settings › Advanced offers extra PATH entries, but they only reached the environment
+    /// git ran in — a git living in one of them was never found, so "git not found" stayed
+    /// on screen unless the user gave a full path override instead.
+    @Test func extraPathsAreSearchedForGit() async throws {
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent("repobar-extrapath-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let fake = dir.appendingPathComponent("git")
+        try "#!/bin/sh\necho 'git version 2.99.0 (fake)'\n".write(to: fake, atomically: true, encoding: .utf8)
+        try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: fake.path)
+
+        var settings = EngineSettings()
+        settings.extraPaths = [dir.path]
+        let engineDir = FileManager.default.temporaryDirectory.appendingPathComponent("repobar-extrapath-engine-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: engineDir) }
+        let engine = RepoEngine(persistence: RepoPersistence(directory: engineDir), settings: settings)
+        await engine.relocateGit()
+
+        #expect(await engine.installation?.url == fake, "the git in an extra PATH entry is found")
+    }
+
     @Test func addCheckNotifyMarkSeenRemove() async throws {
         let fx = try await GitFixture()
         let remote = try await fx.makeRemote()

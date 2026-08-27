@@ -10,11 +10,4 @@ public enum RevListParser {
         return (left, right)
     }
 
-    /// Parses `git rev-list --count X`.
-    public static func parseCount(_ text: String) throws -> Int {
-        guard let value = Int(text.trimmingCharacters(in: .whitespacesAndNewlines)) else {
-            throw ParseError.malformed("rev-list count: \(text)")
-        }
-        return value
-    }
 }

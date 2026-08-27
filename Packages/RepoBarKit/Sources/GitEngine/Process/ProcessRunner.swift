@@ -150,7 +150,7 @@ public struct FoundationProcessRunner: ProcessRunning {
             await exitSignal.wait()
         } onCancel: {
             control.terminate()
-            let deadline = DispatchTime.now() + .milliseconds(Int(max(0, grace.components.seconds * 1000 + grace.components.attoseconds / 1_000_000_000_000_000)))
+            let deadline = DispatchTime.now() + .milliseconds(Int(max(0, grace.seconds * 1000)))
             DispatchQueue.global().asyncAfter(deadline: deadline) { control.kill() }
         }
         // Cancelled here, not by the defer at function exit: the process has finished, so the

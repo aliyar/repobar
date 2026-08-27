@@ -20,6 +20,14 @@ struct GitErrorClassifierTests {
         ("fatal: 'origin' does not appear to be a git repository\nfatal: Could not read from remote repository.", .noRemote),
         ("error: No such remote 'origin'", .noRemote),
         ("fatal: couldn't find remote ref refs/heads/nope", .remoteRefNotFound(branch: nil)),
+        // Patterns with real regex syntax in them, kept honest after the switch from Swift
+        // Regex to NSRegularExpression: alternation, \d\d, an escaped dot, case folding.
+        ("No ED25519 host key is known for github.com", .hostKeyVerification),
+        ("No ECDSA host key is known for gitlab.com", .hostKeyVerification),
+        ("error: RPC failed; HTTP 503 curl 22", .serverError),
+        ("fatal: Unable to create '/repo/.git/shallow.lock': File exists.", .lockConflict),
+        ("FATAL: NOT A GIT REPOSITORY (or any parent)", .notARepository),
+        ("fatal: 'upstream' does not appear to be a git repository", .noRemote),
         ("fatal: unable to access 'https://x/': SSL certificate problem: unable to get local issuer certificate", .tlsError),
         ("fatal: unable to access 'https://x/': Could not resolve host: nonexistent.invalid", .networkUnreachable),
         ("ssh: connect to host 127.0.0.1 port 1: Connection refused", .networkUnreachable),

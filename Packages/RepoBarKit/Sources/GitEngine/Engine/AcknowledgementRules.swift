@@ -57,8 +57,7 @@ public enum AcknowledgementRules {
         now: Date
     ) -> Bool {
         guard trackingUpstream, let after, ahead > 0, !muted, let aheadSince else { return false }
-        let seconds = Double(after.components.seconds)
-        guard now.timeIntervalSince(aheadSince) >= seconds else { return false }
+        guard now.timeIntervalSince(aheadSince) >= after.seconds else { return false }
         guard let lastReminded else { return true }
         return now.timeIntervalSince(lastReminded) >= 86_400
     }

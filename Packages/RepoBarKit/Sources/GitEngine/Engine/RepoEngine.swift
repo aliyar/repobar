@@ -151,7 +151,11 @@ public actor RepoEngine {
     // MARK: - Git discovery
 
     public func relocateGit() async {
-        let locator = GitLocator(runner: runner)
+        // Settings › Advanced offers extra PATH entries; they were only added to the
+        // environment git runs in, so a git that lives in one of them was never found —
+        // the user had to give a full path override instead.
+        let extra = settings.extraPaths.map { URL(fileURLWithPath: $0).appendingPathComponent("git") }
+        let locator = GitLocator(runner: runner, extraCandidates: extra)
         let override = settings.gitPathOverride.map { URL(fileURLWithPath: $0) }
         installation = await locator.locate(override: override)
         if let installation {
@@ -306,8 +310,7 @@ public actor RepoEngine {
         if pendingSeen.remove(record.id) != nil {
             if let watched = snapshot.watched, let tip = snapshot.watchedTipSHA {
                 state.lastSeenSHA[watched.key] = tip
-                snapshot.unseenCount = 0
-                for index in snapshot.incoming.indices { snapshot.incoming[index].isNew = false }
+                snapshot.markEverythingSeen()
             } else {
                 // No tip to acknowledge (transient failure, offline, ref gone). `state` is the
                 // copy this check took before markSeen wrote to it, so keep the live ledgers
@@ -436,8 +439,7 @@ public actor RepoEngine {
         guard var snapshot = state.lastSnapshot, let watched = snapshot.watched, let tip = snapshot.watchedTipSHA else { return }
         state.lastSeenSHA[watched.key] = tip
         state.lastNotifiedSHA[watched.key] = tip
-        snapshot.unseenCount = 0
-        for index in snapshot.incoming.indices { snapshot.incoming[index].isNew = false }
+        snapshot.markEverythingSeen()
         state.lastSnapshot = snapshot
         states[id] = state
         continuation.yield(.acknowledged(id, snapshot))
@@ -454,12 +456,9 @@ public actor RepoEngine {
         guard let git else { throw EngineError.gitNotFound }
         guard let record = records.first(where: { $0.id == id }) else { throw EngineError.unknownRepository }
         if let task = inFlight[id] { await task.value }
+        // No preflight here: PullService.pull runs it, and running it twice on the same
+        // snapshot only meant two chances to disagree.
         let snapshot = states[id]?.lastSnapshot
-        do {
-            try PullService.preflight(snapshot: snapshot)
-        } catch {
-            throw EngineError.pullRefused(error)
-        }
         let service = PullService(git: git)
         let commonDir = record.gitCommonDir
         let result: PullResult
