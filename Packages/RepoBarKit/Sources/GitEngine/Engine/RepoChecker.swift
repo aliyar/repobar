@@ -84,10 +84,20 @@ public struct RepoChecker: Sendable {
         }
 
         // A user-configured `core.sshCommand` must not be overridden by our GIT_SSH_COMMAND.
+        // Cached for a day: this is a whole git process on every check of every repository,
+        // and the setting changes about as often as the remote URL does.
+        var state = state
         var client = git
-        if options.allowNetwork, client.networkEnvironment["GIT_SSH_COMMAND"] != client.environment["GIT_SSH_COMMAND"],
-           let out = try? await client.output(["config", "--get", "core.sshCommand"], in: record.url), out.exitCode == 0 {
-            client.networkEnvironment = client.environment
+        if options.allowNetwork, client.networkEnvironment["GIT_SSH_COMMAND"] != client.environment["GIT_SSH_COMMAND"] {
+            let configured: Bool
+            if let cached = state.cachedHasSSHCommand, cached.isFresh(maxAge: 24 * 3600, now: options.now) {
+                configured = cached.value
+            } else {
+                let out = try? await client.output(["config", "--get", "core.sshCommand"], in: record.url)
+                configured = out?.exitCode == 0
+                state.cachedHasSSHCommand = CachedValue(value: configured, resolvedAt: options.now)
+            }
+            if configured { client.networkEnvironment = client.environment }
         }
         return await RepoChecker(git: client).performCheck(record, state: state, snapshot: snapshot, options: options)
     }

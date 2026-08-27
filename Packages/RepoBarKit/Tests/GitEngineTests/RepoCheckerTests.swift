@@ -312,7 +312,11 @@ struct RepoCheckerTests {
         #expect(outcome.snapshot.networkMode == .offlineLocalOnly)
         #expect(outcome.snapshot.comparison == BranchComparison(ahead: 0, behind: 0))
         #expect(!fx.runner.gitSubcommands.contains("fetch"))
-        #expect(!fx.runner.gitSubcommands.contains("ls-remote") || fx.runner.invocations.contains { $0.contains("--get-url") })
+        // `ls-remote --get-url` only reads the config, so it is allowed; anything else on
+        // ls-remote would touch the network. The old assertion was satisfied by --get-url
+        // being present and therefore asserted nothing.
+        let networkProbes = fx.runner.invocations.filter { $0.contains("ls-remote") && !$0.contains("--get-url") }
+        #expect(networkProbes.isEmpty, "offline must not reach the network: \(networkProbes)")
     }
 
     @Test func validationRejectsBareAndNormalizesSubdirectories() async throws {

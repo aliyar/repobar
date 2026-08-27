@@ -85,10 +85,12 @@ public enum RepoError: Codable, Sendable, Hashable {
 /// Maps git/ssh stderr to `RepoError`. First match wins; patterns are case-insensitive.
 public enum GitErrorClassifier {
     private struct Rule: Sendable {
-        let pattern: String
+        /// Compiled once with the table below, not per classification: every failing check
+        /// used to rebuild all 67 patterns. NSRegularExpression is immutable and Sendable.
+        let regex: NSRegularExpression?
         let error: RepoError
         init(_ pattern: String, _ error: RepoError) {
-            self.pattern = pattern
+            self.regex = try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive])
             self.error = error
         }
     }
@@ -164,9 +166,10 @@ public enum GitErrorClassifier {
     ]
 
     public static func classify(stderr: String) -> RepoError {
+        let range = NSRange(stderr.startIndex..., in: stderr)
         for rule in rules {
-            guard let regex = try? Regex(rule.pattern).ignoresCase() else { continue }
-            if stderr.contains(regex) { return rule.error }
+            guard let regex = rule.regex else { continue }
+            if regex.firstMatch(in: stderr, range: range) != nil { return rule.error }
         }
         let firstLine = stderr
             .split(whereSeparator: \.isNewline)

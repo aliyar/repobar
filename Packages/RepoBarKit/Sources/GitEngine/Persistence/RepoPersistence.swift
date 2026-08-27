@@ -50,7 +50,9 @@ public actor RepoPersistence {
     public func saveStates(_ states: [RepoID: RepoState]) throws {
         var raw: [String: RepoState] = [:]
         for (id, state) in states { raw[id.uuidString] = state }
-        try save(StatesFile(states: raw), to: statesURL)
+        // Not pretty-printed: this one is written on every check and read by nobody, while
+        // repos.json stays readable because people do open and edit it.
+        try save(StatesFile(states: raw), to: statesURL, pretty: false)
     }
 
     // MARK: - Private
@@ -70,9 +72,9 @@ public actor RepoPersistence {
         }
     }
 
-    private func save<T: Encodable>(_ value: T, to url: URL) throws {
+    private func save<T: Encodable>(_ value: T, to url: URL, pretty: Bool = true) throws {
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        let data = try Self.encoder.encode(value)
+        let data = try (pretty ? Self.encoder : Self.compactEncoder).encode(value)
         try data.write(to: url, options: [.atomic])
     }
 
@@ -95,6 +97,17 @@ public actor RepoPersistence {
             try container.encode(fractionalFormatter.string(from: date))
         }
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        return encoder
+    }()
+
+    /// Same dates, no indentation — for the file that is rewritten on every check.
+    private static let compactEncoder: JSONEncoder = {
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .custom { date, encoder in
+            var container = encoder.singleValueContainer()
+            try container.encode(fractionalFormatter.string(from: date))
+        }
+        encoder.outputFormatting = [.sortedKeys]
         return encoder
     }()
 

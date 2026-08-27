@@ -136,13 +136,9 @@ public struct WatchedRefResolver: Sendable {
             return resolution
         }
         resolution.watched = watched
-        if let known = sha(of: watched.trackingRef) {
-            resolution.localTrackingSHA = known
-        } else if watched.source == .lsRemoteSymref || watched.source == .override {
-            // Not part of the first query; look it up now.
-            let out = try await git.run(["for-each-ref", "--format=\(ForEachRefParser.format)", watched.trackingRef], in: repo)
-            resolution.localTrackingSHA = ForEachRefParser.parse(out.stdoutText).first?.objectName
-        }
+        // The query above asks for the remote's whole namespace, so every tracking ref that
+        // exists is already in `refs` — including the ones ls-remote or an override chose.
+        resolution.localTrackingSHA = sha(of: watched.trackingRef)
         return resolution
     }
 }

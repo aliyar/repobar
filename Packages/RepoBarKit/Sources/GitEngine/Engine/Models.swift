@@ -338,6 +338,8 @@ public struct RepoState: Codable, Sendable, Hashable {
     /// Keyed by remote name: a repository with `origin` and `upstream` must not serve one's
     /// web URL for the other after a remoteOverride change.
     public var cachedRemoteURL: [String: CachedValue<String>] = [:]
+    /// Whether the repository sets core.sshCommand — one process per check before it was cached.
+    public var cachedHasSSHCommand: CachedValue<Bool>?
     public var lastSnapshot: RepoSnapshot?
     public var lastAttemptAt: Date?
     public var lastSuccessAt: Date?
@@ -351,7 +353,7 @@ public struct RepoState: Codable, Sendable, Hashable {
     public init() {}
 
     enum CodingKeys: String, CodingKey {
-        case lastSeenSHA, lastNotifiedSHA, cachedDefaultBranch, cachedRemoteURL, lastSnapshot
+        case lastSeenSHA, lastNotifiedSHA, cachedDefaultBranch, cachedRemoteURL, cachedHasSSHCommand, lastSnapshot
         case lastAttemptAt, lastSuccessAt, consecutiveFailures, lastFailureKind, backoffUntil
         case aheadSince, lastUnpushedReminderAt
     }
@@ -362,6 +364,7 @@ public struct RepoState: Codable, Sendable, Hashable {
         lastNotifiedSHA = try c.decodeIfPresent([String: String].self, forKey: .lastNotifiedSHA) ?? [:]
         cachedDefaultBranch = try c.decodeIfPresent([String: CachedValue<String>].self, forKey: .cachedDefaultBranch) ?? [:]
         cachedRemoteURL = (try? c.decodeIfPresent([String: CachedValue<String>].self, forKey: .cachedRemoteURL)) ?? [:]
+        cachedHasSSHCommand = (try? c.decodeIfPresent(CachedValue<Bool>.self, forKey: .cachedHasSSHCommand)) ?? nil
         lastSnapshot = (try? c.decodeIfPresent(RepoSnapshot.self, forKey: .lastSnapshot)) ?? nil
         lastAttemptAt = try c.decodeIfPresent(Date.self, forKey: .lastAttemptAt)
         lastSuccessAt = try c.decodeIfPresent(Date.self, forKey: .lastSuccessAt)

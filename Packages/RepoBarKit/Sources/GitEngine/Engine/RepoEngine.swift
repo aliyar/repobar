@@ -74,6 +74,8 @@ public actor RepoEngine {
     private var inFlight: [RepoID: Task<Void, Never>] = [:]
     /// A trigger that arrived while a check was running, to be honoured once it finishes.
     private var queuedRecheck: [RepoID: CheckReason] = [:]
+    /// A concurrency change that arrived while checks were running.
+    private var pendingGateSize: Int?
     private var pendingSeen: Set<RepoID> = []
     private var ticker: Task<Void, Never>?
     private var saveTask: Task<Void, Never>?
@@ -118,7 +120,11 @@ public actor RepoEngine {
         }
         await relocateGit()
         ticker = Task { [weak self] in
-            await self?.runTicker()
+            // Re-acquired every tick: awaiting one long-running method would hold the engine
+            // alive for the process's lifetime, which keeps test directories around too.
+            while !Task.isCancelled {
+                guard let self, await self.tickOnce() else { return }
+            }
         }
         Task { [weak self] in
             try? await Task.sleep(for: .seconds(1))
@@ -133,13 +139,13 @@ public actor RepoEngine {
         inFlight.removeAll()
     }
 
-    private func runTicker() async {
-        while !Task.isCancelled {
-            let tick = min(Duration.seconds(30), .seconds(max(15, settings.checkInterval.seconds / 4)))
-            try? await Task.sleep(for: tick, tolerance: tick / 4)
-            if Task.isCancelled { return }
-            runDue(reason: .interval)
-        }
+    /// One tick: sleep, then check what is due. Returns false when the ticker should stop.
+    private func tickOnce() async -> Bool {
+        let tick = min(Duration.seconds(30), .seconds(max(15, settings.checkInterval.seconds / 4)))
+        try? await Task.sleep(for: tick, tolerance: tick / 4)
+        if Task.isCancelled { return false }
+        runDue(reason: .interval)
+        return true
     }
 
     // MARK: - Git discovery
@@ -223,6 +229,10 @@ public actor RepoEngine {
 
     private func clearInFlight(_ id: RepoID) {
         inFlight[id] = nil
+        if inFlight.isEmpty, let size = pendingGateSize {
+            gate = GitGate(maxConcurrent: size)
+            pendingGateSize = nil
+        }
         if let reason = queuedRecheck.removeValue(forKey: id) { startCheck(id, reason: reason) }
     }
 
@@ -280,7 +290,7 @@ public actor RepoEngine {
                 state.consecutiveFailures += 1
                 state.lastFailureKind = kind
                 if let delay = backoff.delay(afterFailures: state.consecutiveFailures, kind: kind, interval: settings.checkInterval) {
-                    state.backoffUntil = delay == .zero ? nil : now.addingTimeInterval(delay.seconds)
+                    state.backoffUntil = now.addingTimeInterval(delay.seconds)
                 } else {
                     state.backoffUntil = .distantFuture
                 }
@@ -491,7 +501,13 @@ public actor RepoEngine {
         let old = settings
         settings = newSettings
         if old.maxConcurrentChecks != newSettings.maxConcurrentChecks {
-            gate = GitGate(maxConcurrent: newSettings.maxConcurrentChecks)
+            // Replacing the gate while checks hold its permits loses them; apply it once
+            // nothing is running (clearInFlight picks up a pending size).
+            if inFlight.isEmpty {
+                gate = GitGate(maxConcurrent: newSettings.maxConcurrentChecks)
+            } else {
+                pendingGateSize = newSettings.maxConcurrentChecks
+            }
         }
         if old.gitPathOverride != newSettings.gitPathOverride || old.extraPaths != newSettings.extraPaths {
             await relocateGit()
