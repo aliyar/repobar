@@ -522,9 +522,17 @@ final class AppModel {
         NSWorkspace.shared.open(url)
     }
 
-    func openRepositoryPage(_ id: RepoID) {
-        guard let url = snapshots[id]?.web?.repoURL else { return }
+    /// Opens a page the row already resolved. The row builds its web menu out of the URLs
+    /// `WebRemote` can produce, so by the time an item exists its URL does too.
+    func openWebURL(_ url: URL) {
         NSWorkspace.shared.open(url)
+    }
+
+    func copyRepositoryURL(_ id: RepoID) {
+        guard let url = snapshots[id]?.web?.repoURL else { return }
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(url.absoluteString, forType: .string)
+        showToast("Copied repository URL", kind: .info)
     }
 
     // MARK: - Toast

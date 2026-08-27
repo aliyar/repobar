@@ -140,6 +140,55 @@ struct RemoteURLTests {
         #expect(web.kind == .github)
         #expect(web.commitURL("abc").absoluteString == "https://github.example.com/o/r/commit/abc")
     }
+
+    @Test func webPagesPerForge() throws {
+        let github = try #require(WebRemote.from(remote: "git@github.com:owner/repo.git"))
+        #expect(github.pageURL(.pullRequests)?.absoluteString == "https://github.com/owner/repo/pulls")
+        #expect(github.pageURL(.pipelines)?.absoluteString == "https://github.com/owner/repo/actions")
+        #expect(github.pageURL(.releases)?.absoluteString == "https://github.com/owner/repo/releases")
+        #expect(github.commitsURL(branch: "main")?.absoluteString == "https://github.com/owner/repo/commits/main")
+        #expect(github.newPullRequestURL(branch: "feature/x")?.absoluteString == "https://github.com/owner/repo/pull/new/feature/x")
+
+        let gitlab = try #require(WebRemote.from(remote: "https://gitlab.com/group/sub/repo.git"))
+        #expect(gitlab.pageURL(.pullRequests)?.absoluteString == "https://gitlab.com/group/sub/repo/-/merge_requests")
+        #expect(gitlab.pageURL(.pipelines)?.absoluteString == "https://gitlab.com/group/sub/repo/-/pipelines")
+        #expect(gitlab.commitsURL(branch: "main")?.absoluteString == "https://gitlab.com/group/sub/repo/-/commits/main")
+        let mr = try #require(gitlab.newPullRequestURL(branch: "feature/x"))
+        #expect(mr.absoluteString.hasPrefix("https://gitlab.com/group/sub/repo/-/merge_requests/new?"))
+        #expect(mr.absoluteString.contains("source_branch"))
+
+        // Gitea shares GitHub's page names but not its branch-history path.
+        let gitea = try #require(WebRemote.from(remote: "http://gitea.local:3000/o/r.git"))
+        #expect(gitea.pageURL(.pullRequests)?.absoluteString == "http://gitea.local:3000/o/r/pulls")
+        #expect(gitea.commitsURL(branch: "main")?.absoluteString == "http://gitea.local:3000/o/r/commits/branch/main")
+
+        let bitbucket = try #require(WebRemote.from(remote: "git@bitbucket.org:o/r.git"))
+        #expect(bitbucket.pageURL(.pullRequests)?.absoluteString == "https://bitbucket.org/o/r/pull-requests")
+        #expect(bitbucket.commitsURL(branch: "main")?.absoluteString == "https://bitbucket.org/o/r/commits/branch/main")
+    }
+
+    /// A page RepoBar cannot address is left out instead of guessed at: the menu is built
+    /// from what comes back, so a forge without a page simply has no item for it.
+    @Test func unbuildablePagesAreOmitted() throws {
+        let bitbucket = try #require(WebRemote.from(remote: "git@bitbucket.org:o/r.git"))
+        #expect(bitbucket.pageURL(.releases) == nil)
+        #expect(bitbucket.pageURL(.tags) == nil)
+        #expect(bitbucket.newPullRequestURL(branch: "x") == nil)
+
+        let azure = try #require(WebRemote.from(remote: "git@ssh.dev.azure.com:v3/org/proj/repo"))
+        #expect(azure.pageURL(.pullRequests)?.absoluteString == "https://dev.azure.com/org/proj/_git/repo/pullrequests")
+        #expect(azure.pageURL(.pipelines) == nil)
+        #expect(azure.commitsURL(branch: "main") == nil)
+
+        let unknown = try #require(WebRemote.from(remote: "git@work:o/r.git"))
+        for page in WebPage.allCases { #expect(unknown.pageURL(page) == nil) }
+        #expect(unknown.commitsURL(branch: "main") == nil)
+        #expect(unknown.newPullRequestURL(branch: "main") == nil)
+
+        let github = try #require(WebRemote.from(remote: "git@github.com:o/r.git"))
+        #expect(github.commitsURL(branch: "") == nil)
+        #expect(github.newPullRequestURL(branch: "") == nil)
+    }
 }
 
 @Suite("GitEnvironment")

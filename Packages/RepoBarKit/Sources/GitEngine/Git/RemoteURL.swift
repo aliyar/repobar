@@ -139,3 +139,96 @@ public struct WebRemote: Codable, Sendable, Hashable {
         }
     }
 }
+
+/// A page of a forge's web UI that RepoBar can link to. The engine only maps a page to a
+/// URL; the visible title belongs to the app, which is why this is an enum and not a string.
+public enum WebPage: String, Codable, Sendable, Hashable, CaseIterable {
+    case pullRequests, issues, pipelines, branches, tags, releases
+}
+
+extension WebRemote {
+    /// The page's URL, or nil when this forge has no such page or the path is not known
+    /// well enough to build one. A link that cannot be built is never offered: a broken
+    /// link is worse than a missing one.
+    public func pageURL(_ page: WebPage) -> URL? {
+        guard let path = Self.path(for: page, kind: kind) else { return nil }
+        return repoURL.appending(path: path)
+    }
+
+    /// History of one branch.
+    public func commitsURL(branch: String) -> URL? {
+        guard !branch.isEmpty else { return nil }
+        switch kind {
+        case .github: return repoURL.appending(path: "commits/\(branch)")
+        case .gitlab: return repoURL.appending(path: "-/commits/\(branch)")
+        case .gitea, .bitbucket: return repoURL.appending(path: "commits/branch/\(branch)")
+        case .sourcehut: return repoURL.appending(path: "log/\(branch)")
+        case .azureDevOps, .unknown: return nil
+        }
+    }
+
+    /// The "open a pull request from this branch" form. Offered only where the form fills
+    /// the target branch in by itself — the others would need a base branch that RepoBar
+    /// does not reliably know (the watched ref is not always the repository's default).
+    public func newPullRequestURL(branch: String) -> URL? {
+        guard !branch.isEmpty else { return nil }
+        switch kind {
+        case .github:
+            return repoURL.appending(path: "pull/new/\(branch)")
+        case .gitlab:
+            let base = repoURL.appending(path: "-/merge_requests/new")
+            guard var components = URLComponents(url: base, resolvingAgainstBaseURL: false) else { return nil }
+            components.queryItems = [URLQueryItem(name: "merge_request[source_branch]", value: branch)]
+            return components.url
+        case .bitbucket, .gitea, .azureDevOps, .sourcehut, .unknown:
+            return nil
+        }
+    }
+
+    private static func path(for page: WebPage, kind: Kind) -> String? {
+        switch kind {
+        case .github, .gitea:
+            switch page {
+            case .pullRequests: "pulls"
+            case .issues: "issues"
+            case .pipelines: "actions"
+            case .branches: "branches"
+            case .tags: "tags"
+            case .releases: "releases"
+            }
+        case .gitlab:
+            switch page {
+            case .pullRequests: "-/merge_requests"
+            case .issues: "-/issues"
+            case .pipelines: "-/pipelines"
+            case .branches: "-/branches"
+            case .tags: "-/tags"
+            case .releases: "-/releases"
+            }
+        case .bitbucket:
+            switch page {
+            case .pullRequests: "pull-requests"
+            case .issues: "issues"
+            case .pipelines: "pipelines"
+            case .branches: "branches"
+            // Bitbucket Cloud has no releases page and files tags under a tab of /branches.
+            case .tags, .releases: nil
+            }
+        case .azureDevOps:
+            switch page {
+            case .pullRequests: "pullrequests"
+            case .branches: "branches"
+            // Builds and work items live one level up, on the project, not the repository.
+            case .issues, .pipelines, .tags, .releases: nil
+            }
+        case .sourcehut:
+            switch page {
+            case .branches: "refs"
+            // Tickets and patches are on other sr.ht hosts, not on git.sr.ht.
+            case .pullRequests, .issues, .pipelines, .tags, .releases: nil
+            }
+        case .unknown:
+            nil
+        }
+    }
+}

@@ -240,31 +240,16 @@ struct RepoRow: View {
 
     private var openMenu: some View {
         let activeApp = model.openApp(for: item.id)
-        let installed = model.openApps
         return Menu {
-            ForEach(ExternalApp.Kind.allCases, id: \.self) { kind in
-                let apps = installed.filter { $0.kind == kind }
-                if !apps.isEmpty {
-                    Section(kind.title) {
-                        ForEach(apps) { app in
-                            Button {
-                                model.closePanel?()
-                                model.open(item.id, in: app)
-                            } label: {
-                                if app == activeApp {
-                                    Label(app.name, systemImage: "checkmark")
-                                } else {
-                                    Text(app.name)
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+            openAppItems
+            Divider()
+            Button("Copy Path") { model.copyPath(item.id) }
             if item.snapshot?.web != nil {
-                Divider()
-                Button("Repository page") { model.openRepositoryPage(item.id) }
+                Button("Copy Repository URL") { model.copyRepositoryURL(item.id) }
             }
+            // Same section as the row's context menu, from one definition, so the two
+            // cannot drift apart.
+            webMenu
         } label: {
             Label("Open in \(activeApp.name)", systemImage: "arrow.up.forward.app")
         } primaryAction: {
@@ -278,19 +263,17 @@ struct RepoRow: View {
 
     @ViewBuilder
     private var contextMenu: some View {
-        let installed = model.openApps
-        ForEach(installed.filter { $0.kind == .finder || $0.kind == .terminal }) { app in
-            Button("Open in \(app.name)") { model.closePanel?(); model.open(item.id, in: app) }
-        }
-        let editors = installed.filter { $0.kind != .finder && $0.kind != .terminal }
-        if !editors.isEmpty {
-            Menu("Open in…") {
-                ForEach(editors) { app in
-                    Button(app.name) { model.closePanel?(); model.open(item.id, in: app) }
-                }
-            }
-        }
+        // One flat entry — the app this repository was last opened with, the same one the
+        // row's split button offers. Listing Finder and every terminal flat grew a row per
+        // installed terminal and said nothing about which one you actually use.
+        let activeApp = model.openApp(for: item.id)
+        Button("Open in \(activeApp.name)") { model.closePanel?(); model.open(item.id, in: activeApp) }
+        Menu("Open in…") { openAppItems }
         Button("Copy Path") { model.copyPath(item.id) }
+        if item.snapshot?.web != nil {
+            Button("Copy Repository URL") { model.copyRepositoryURL(item.id) }
+        }
+        webMenu
         Divider()
         Button("Check Now") { model.refresh(item.id) }
         if item.unseen > 0 {
@@ -351,6 +334,118 @@ struct RepoRow: View {
         Button("Remove…", role: .destructive) {
             withAnimation(animation) { ui.confirmingRemoval = item.id }
         }
+    }
+
+    // MARK: Open in
+
+    /// Installed applications by kind, empty kinds dropped so no divider is left stranded.
+    private var openAppGroups: [[ExternalApp]] {
+        ExternalApp.Kind.allCases
+            .map { kind in model.openApps.filter { $0.kind == kind } }
+            .filter { !$0.isEmpty }
+    }
+
+    /// The application list behind both the split button and the context menu's "Open in…".
+    /// The kinds are separated by a divider rather than titled: four headings for what is
+    /// usually one or two entries each said less than the gap between them does.
+    @ViewBuilder
+    private var openAppItems: some View {
+        let activeApp = model.openApp(for: item.id)
+        ForEach(Array(openAppGroups.enumerated()), id: \.offset) { index, apps in
+            if index > 0 { Divider() }
+            ForEach(apps) { app in
+                // A Toggle puts the tick in the menu's shared state column. Drawing it as a
+                // Label's image reserved an icon slot instead, and only in the block that
+                // held the active app — which indented that block past all the others.
+                Toggle(isOn: Binding(
+                    get: { app == activeApp },
+                    set: { _ in model.closePanel?(); model.open(item.id, in: app) }
+                )) {
+                    Text(app.name)
+                }
+            }
+        }
+    }
+
+    // MARK: Web menu
+
+    private struct WebLink: Identifiable {
+        let id: String
+        let title: String
+        let url: URL
+    }
+
+    /// Where this repository lives on the web. The two time-sensitive destinations stay
+    /// flat next to the repository page; the rest go one level down, the way "Open in…"
+    /// keeps the long list of applications out of the way.
+    @ViewBuilder
+    private var webMenu: some View {
+        if let web = item.snapshot?.web {
+            Divider()
+            Button("Repository Page") { model.openWebURL(web.repoURL) }
+            if let url = incomingCompareURL {
+                Button(item.unseen == 1 ? "View 1 New Commit" : "View \(item.unseen) New Commits") {
+                    model.openWebURL(url)
+                }
+            }
+            if let branch = pullRequestBranch, let url = web.newPullRequestURL(branch: branch) {
+                Button(WebLinks.newPullRequestTitle(on: web.kind)) { model.openWebURL(url) }
+            }
+            let groups = webLinkGroups(web)
+            if !groups.isEmpty {
+                Menu("Open on \(WebLinks.forgeName(web))") {
+                    ForEach(Array(groups.enumerated()), id: \.offset) { index, group in
+                        if index > 0 { Divider() }
+                        ForEach(group) { link in
+                            Button(link.title) { model.openWebURL(link.url) }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /// The submenu's contents, with empty groups already dropped so no divider is left
+    /// hanging on a forge that has none of that group's pages.
+    private func webLinkGroups(_ web: WebRemote) -> [[WebLink]] {
+        var groups: [[WebLink]] = []
+        for pages in WebLinks.groups {
+            var links = pages.compactMap { page in
+                web.pageURL(page).map {
+                    WebLink(id: page.rawValue, title: WebLinks.title(page, on: web.kind), url: $0)
+                }
+            }
+            // The watched branch's history heads the second group: of all the branch pages
+            // it is the one the user is already thinking about.
+            if pages.contains(.branches), let branch = item.snapshot?.watched?.branch,
+               let url = web.commitsURL(branch: branch) {
+                links.insert(WebLink(id: "commits", title: "Commits on \(branch)", url: url), at: 0)
+            }
+            if !links.isEmpty { groups.append(links) }
+        }
+        return groups
+    }
+
+    /// A compare view of exactly the commits RepoBar is reporting.
+    private var incomingCompareURL: URL? {
+        guard item.unseen > 0,
+              let snapshot = item.snapshot,
+              let web = snapshot.web,
+              let local = snapshot.head?.sha,
+              let tip = snapshot.watchedTipSHA
+        else { return nil }
+        return web.compareURL(from: local, to: tip)
+    }
+
+    /// The checked-out branch, but only when it is on the remote and is not the branch
+    /// being watched — a pull request from the branch you track would compare nothing.
+    private var pullRequestBranch: String? {
+        guard let snapshot = item.snapshot,
+              let branch = snapshot.head?.branchName,
+              branch != snapshot.watched?.branch,
+              snapshot.remoteBranches.contains(branch)
+        else { return nil }
+        return branch
     }
 }
 

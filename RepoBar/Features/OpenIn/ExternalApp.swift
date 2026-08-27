@@ -2,18 +2,10 @@ import AppKit
 
 /// An application a repository folder can be opened in. Only installed apps are offered.
 nonisolated struct ExternalApp: Identifiable, Hashable, Sendable {
+    /// The order also groups the menus: the cases are walked in order and each one that has
+    /// an installed application becomes its own block between dividers.
     enum Kind: String, CaseIterable, Sendable {
         case finder, custom, terminal, editor, gitClient
-
-        var title: String {
-            switch self {
-            case .finder: "Finder"
-            case .terminal: "Terminals"
-            case .editor: "Editors"
-            case .gitClient: "Git clients"
-            case .custom: "Added by you"
-            }
-        }
     }
 
     /// Bundle identifier.

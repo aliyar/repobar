@@ -43,6 +43,11 @@ GitHub/GitLab, fast-forward your branch, or jump into the repository with your e
   (click one to open it on the web), *Pull* (fast-forward only — no merge commits, refused if the tree is dirty),
   *Mark as seen*, *Open in* Finder / Terminal / VS Code / Cursor / Xcode / Fork / Tower… — or any application
   you add yourself. Each repository remembers the one you opened it with last.
+- **One step to the right page.** *Repository Page*, *Pull Requests*, *Issues*, *Actions*, *Branches*, *Tags*,
+  *Releases* — all built from the repository's own remote, so there is no account to connect and no token to
+  store. When commits are waiting, *View 3 New Commits* opens the compare view for exactly those; on a branch
+  that is already pushed, *New Pull Request*. GitHub, GitLab, Bitbucket, Gitea/Forgejo and Azure DevOps are
+  understood, and a page a forge does not have is left out rather than guessed at.
 - **Notifications** when new commits arrive, with *Open* and *Pull* actions — plus a reminder when your own
   commits have been sitting unpushed. Silence everything for a while, or one repository at a time; a timed
   mute lifts itself.
@@ -82,7 +87,8 @@ first, and counts the rest as `+N`.
 
 - Light, dark or system appearance — *Settings › General › Theme*.
 - Repositories with new commits come first. Click a row to expand it; right-click for everything else
-  (*Check Now*, *Copy Path*, *Watch Branch…* — the remote's real branches, *Color*, *Notifications*, *Remove*).
+  (*Check Now*, *Copy Path*, *Copy Repository URL*, the repository's web pages, *Watch Branch…* — the remote's
+  real branches, *Color*, *Notifications*, *Remove*).
 - Drop repository folders onto the panel to add them — or drop a folder that *contains* repositories and
   add them all at once.
 - Keyboard: <kbd>⌃⌘R</kbd> opens the panel from anywhere (configurable), then <kbd>↑</kbd><kbd>↓</kbd> to move,
