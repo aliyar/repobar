@@ -63,9 +63,9 @@ GitHub/GitLab, fast-forward your branch, or jump into the repository with your e
   </picture>
 </p>
 
-Every repository gets a color (change it from the repository's context menu). With up to eight repositories
-the *Dots* style shows all of them, so "3 of 5 changed" is readable at a glance; with more, only the ones with
-news are shown.
+Every repository gets a color (change it from the repository's context menu). The *Dots* style shows as many
+as you allow it (eight by default, *Settings › Menu Bar*), in the panel's order so the ones with news come
+first, and counts the rest as `+N`.
 
 ## The panel
 

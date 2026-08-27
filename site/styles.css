@@ -403,7 +403,11 @@ html:not(.js) #rb-trigger { pointer-events: none; }
   transition: background 120ms linear, color 120ms linear;
 }
 .rb-icon svg { width: 14px; height: 14px; }
-.rb-icon:hover { background: rgba(128,128,140,.14); color: var(--rb-text); }
+.rb-icon[aria-pressed] svg { width: 16px; height: 16px; }
+/* pause and silence: the second glyph is the "on" state, chosen by aria-pressed */
+.rb-icon[aria-pressed="false"] svg + svg,
+.rb-icon[aria-pressed="true"] svg:first-child { display: none; }
+.rb-icon[aria-pressed="true"] { color: var(--rb-text); }
 .rb-icon:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .rb-icon.is-spinning svg { animation: rb-spin 700ms cubic-bezier(.4,0,.2,1) 1; }
 .rb-ico-spin, .rb-rowspin { display: none; }
@@ -420,21 +424,19 @@ html:not(.js) #rb-trigger { pointer-events: none; }
 @keyframes rb-tick { to { transform: rotate(360deg); } }
 
 .rb-foot-r { display: flex; align-items: center; gap: 10px; }
-.rb-icon .rb-pause-play, .rb-icon .rb-bell-off { display: none; }
-.rb-pop.is-silenced .rb-icon .rb-bell-on { display: none; }
-.rb-pop.is-silenced .rb-icon .rb-bell-off { display: block; }
-.rb-pop.is-paused .rb-icon .rb-pause-bars { display: none; }
-.rb-pop.is-paused .rb-icon .rb-pause-play { display: block; }
 .rb-pop.is-paused .rb-rows { opacity: .55; }
-.rb-quit { color: var(--rb-text-2); }
-.rb-foot-link { color: var(--rb-text-2); text-decoration: none; }
-.rb-foot-link:hover { color: var(--rb-text); }
+.rb-foot-link { color: inherit; text-decoration: none; }
+.rb-foot-link:focus-visible { outline-offset: 1px; }
 .macbar.is-paused .menubar--real .mb-glyph,
 .macbar.is-paused .mb-dots { opacity: .45; }
 
 
 @keyframes rb-spin { to { transform: rotate(360deg); } }
-.rb-status { font-size: 12px; line-height: 1.35; font-weight: 500; letter-spacing: -.01em; }
+.rb-status {
+  /* the app's .caption (10pt), at the demo's caption size — see .rb-branch, .rb-meta */
+  font-size: 11px; line-height: 1.45; font-weight: 500; letter-spacing: -.01em;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
 
 .rb-rows { list-style: none; margin: 0; padding: 3px 0; }
 .rb-repo + .rb-repo { border-top: 1px solid transparent; }
@@ -444,7 +446,7 @@ html:not(.js) #rb-trigger { pointer-events: none; }
   width: 100%; padding: 3px 12px; border: 0; background: none;
   text-align: left; cursor: pointer; color: inherit;
 }
-.rb-row:hover { background: rgba(128,128,140,.10); }
+
 .rb-row:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 .rb-row .dot { --mb: 1.5; }
 .rb-name {
@@ -488,7 +490,7 @@ html:not(.js) #rb-trigger { pointer-events: none; }
   background: var(--rb-surface-2); color: inherit;
   border: .5px solid var(--rb-hair);
 }
-.rb-btn:hover:not(:disabled) { background: color-mix(in srgb, var(--rb-surface-2) 70%, var(--rb-text) 8%); }
+
 .rb-btn:disabled { opacity: .45; cursor: default; }
 .rb-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .rb-open { position: relative; margin-left: auto; }
@@ -519,16 +521,16 @@ html:not(.js) #rb-trigger { pointer-events: none; }
 .rb-menu-check { width: 12px; height: 12px; flex: none; visibility: hidden; }
 .rb-dropdown button.is-current .rb-menu-check { visibility: visible; }
 .rb-dropdown button.is-current { font-weight: 500; }
-.rb-dropdown button:hover { background: var(--accent); color: var(--on-accent); }
+
 .rb-dropdown button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 .rb-note { font-size: 11px; color: var(--rb-text-3); }
 
-.rb-plus { width: 13px; height: 13px; margin-right: 5px; vertical-align: -2px; color: var(--rb-text-3); }
+.rb-plus { width: 13px; height: 13px; margin-right: 5px; vertical-align: -2px; }
 .rb-foot-l { display: inline-flex; align-items: center; }
 .rb-foot {
   border-radius: 0 0 12px 12px;
   display: flex; align-items: center; justify-content: space-between;
-  padding: 5px 12px; border-top: 1px solid var(--rb-hair);
+  min-height: 34px; padding: 5px 12px; border-top: 1px solid var(--rb-hair);
   font-size: 11.5px; color: var(--rb-text-3);
 }
 
@@ -539,6 +541,15 @@ html:not(.js) #rb-trigger { pointer-events: none; }
   .macbar-in { padding-inline: 8px; }
   .macbar-status { gap: 8px; }
 }
+/* A finger cannot hover; on touch the highlight would stick to whatever was tapped last. */
+@media (hover: hover) {
+  .rb-icon:hover { background: rgba(128,128,140,.14); color: var(--rb-text); }
+  .rb-foot-link:hover { color: var(--rb-text); }
+  .rb-row:hover { background: rgba(128,128,140,.10); }
+  .rb-btn:hover:not(:disabled) { background: color-mix(in srgb, var(--rb-surface-2) 70%, var(--rb-text) 8%); }
+  .rb-dropdown button:hover { background: var(--accent); color: var(--on-accent); }
+}
+
 @media (max-width: 420px) {
   .rb-pop { width: calc(100vw - 12px); }
 }

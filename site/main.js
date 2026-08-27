@@ -145,6 +145,7 @@
     });
 
     pop.addEventListener("click", function (e) {
+      if (e.target.closest('a[href^="#"]')) { closePop(false); return; }
       var row = e.target.closest(".rb-row");
       if (row) {
         var repo = row.closest(".rb-repo");
@@ -180,7 +181,6 @@
       } else if (action === "silence") {
         var silenced = pop.classList.toggle("is-silenced");
         btn.setAttribute("aria-pressed", silenced ? "true" : "false");
-        btn.setAttribute("aria-label", silenced ? "Turn notifications back on" : "Silence notifications");
         btn.title = silenced ? "Silenced until tomorrow" : "Silence notifications";
         render();
         say(silenced ? "Notifications silenced." : "Notifications back on.");
@@ -188,8 +188,7 @@
         var paused = pop.classList.toggle("is-paused");
         bar.classList.toggle("is-paused", paused);
         btn.setAttribute("aria-pressed", paused ? "true" : "false");
-        btn.setAttribute("aria-label", paused ? "Resume checks" : "Pause checks");
-        btn.title = paused ? "Resume checks" : "Pause checks";
+        btn.title = paused ? "Checks paused" : "Pause checks";
         render();
         say(paused ? "Checks paused." : "Checks resumed.");
       } else if (btn.closest(".rb-dropdown")) {
