@@ -3,6 +3,10 @@
 # Every fact the page states about the download lives here, so a release cannot leave the
 # site claiming an older build.
 #
+# The version is written in exactly one visible place — the requirements line under the
+# hero. It used to be repeated in the download button and in every page's footer, where
+# the copies quietly went stale.
+#
 # Usage: Scripts/site-version.sh <version> <zip-path> [repo-slug]
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -34,16 +38,12 @@ edit "s|\"fileSize\": \"[^\"]*\"|\"fileSize\": \"$SIZE\"|" \
      "\"fileSize\": \"$SIZE\"" "JSON-LD file size"
 edit "s|releases/download/v[0-9][0-9.]*/RepoBar-[0-9][0-9.]*\.zip|releases/download/v$VERSION/RepoBar-$VERSION.zip|g" \
      "$URL" "download links"
-edit "s|Download RepoBar [0-9][0-9.]*<|Download RepoBar $VERSION<|" \
-     "Download RepoBar $VERSION<" "download button label"
 edit "s|<li>[0-9][0-9.]*</li><li>[0-9][0-9.]* MB</li>|<li>$VERSION</li><li>$SIZE</li>|" \
      "<li>$VERSION</li><li>$SIZE</li>" "requirements line"
 edit "s|<p class=\"dl-meta\">[0-9][0-9.]* MB |<p class=\"dl-meta\">$SIZE |" \
      "<p class=\"dl-meta\">$SIZE " "download meta"
 edit "s|<span class=\"mono\">[0-9a-f]\{64\}</span>|<span class=\"mono\">$SHA</span>|" \
      "$SHA" "SHA-256"
-edit "s|RepoBar <span class=\"mono\">[0-9][0-9.]*</span>|RepoBar <span class=\"mono\">$VERSION</span>|" \
-     "RepoBar <span class=\"mono\">$VERSION</span>" "footer version"
 
 if [[ -f "$MAP" ]]; then
   sed -i '' "s|<lastmod>[0-9-]*</lastmod>|<lastmod>$TODAY</lastmod>|g" "$MAP"

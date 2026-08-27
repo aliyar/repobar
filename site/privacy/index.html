@@ -24,6 +24,7 @@
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
+<!--#partial topbar-->
 <div class="macbar" data-strip>
   <div class="macbar-in">
     <nav class="macbar-menus" aria-label="Sections">
@@ -32,7 +33,7 @@
       <a href="/#glance">The dots</a>
       <a href="/#panel">The panel</a>
       <a href="/#reads">What it runs</a>
-      <a href="/#install">Install</a>
+      <a href="/#install" class="macbar-cta">Download</a>
       <a href="https://github.com/aliyar/repobar" target="_blank" rel="noopener">GitHub</a>
     </nav>
     <div class="macbar-status">
@@ -58,12 +59,7 @@
     </div>
   </div>
 </div>
-<header class="masthead">
-  <a class="wordmark" href="/">
-    <svg class="wordmark-mark" viewBox="0 0 14 14" aria-hidden="true"><use href="#glyph-branch"/></svg>
-    <span>RepoBar</span>
-  </a>
-</header>
+<!--#endpartial-->
 <main id="main" class="doc">
   <div class="col">
     <h1>Privacy</h1>
@@ -100,11 +96,12 @@
     <a class="doc-back" href="/">← RepoBar</a>
   </div>
 </main>
+<!--#partial footer-->
 <footer class="foot">
   <div class="col">
     <div class="foot-grid">
       <div>
-        <p class="foot-brand"><svg class="wordmark-mark" viewBox="0 0 14 14" aria-hidden="true"><use href="#glyph-branch"/></svg> RepoBar <span class="mono">0.1.0</span></p>
+        <p class="foot-brand"><svg class="wordmark-mark" viewBox="0 0 14 14" aria-hidden="true"><use href="#glyph-branch"/></svg> RepoBar</p>
         <p class="foot-note">Free software, provided as is, without warranty of any kind.</p>
       </div>
       <nav aria-label="Project">
@@ -131,6 +128,7 @@
     <p class="foot-legal">RepoBar is not affiliated with Apple, GitHub, GitLab or Atlassian. macOS is a trademark of Apple Inc.</p>
   </div>
 </footer>
+<!--#endpartial-->
 <svg width="0" height="0" class="vh" aria-hidden="true" focusable="false"><defs>
   <symbol id="glyph-branch" viewBox="0 0 64 64">
     <g fill="none" stroke="currentColor" stroke-width="6.6" stroke-linecap="round" stroke-linejoin="round">

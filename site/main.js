@@ -254,15 +254,4 @@
   }
 
 
-  /* ── 3. the toolbar grows a hairline once the page has moved ──────────── */
-  var head = document.querySelector(".masthead");
-  if (head && "IntersectionObserver" in window) {
-    var sentinel = document.createElement("span");
-    sentinel.setAttribute("aria-hidden", "true");
-    sentinel.className = "vh";
-    document.body.insertBefore(sentinel, document.body.firstChild);
-    new IntersectionObserver(function (entries) {
-      head.classList.toggle("is-stuck", !entries[0].isIntersecting);
-    }, { threshold: 0 }).observe(sentinel);
-  }
 })();

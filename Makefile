@@ -6,7 +6,7 @@ APP_PATH := $(DD)/Build/Products/$(CONFIG)/$(APP).app
 XCB      := xcodebuild -project $(APP).xcodeproj -scheme $(SCHEME) -destination 'platform=macOS' -derivedDataPath $(DD)
 PKG      := Packages/RepoBarKit
 
-.PHONY: generate spec build run stop test test-engine test-app screenshots site site-assets open logs clean release release-dry help
+.PHONY: generate spec build run stop test test-engine test-app screenshots site site-assets site-build site-check open logs clean release release-dry help
 
 help:                ## Show targets
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  %-12s %s\n", $$1, $$2}'
@@ -38,6 +38,12 @@ test-app: generate   ## Run app-layer tests via xcodebuild
 site:                ## Serve the landing page locally at http://localhost:8099
 	@echo "http://localhost:8099 — ctrl-c to stop"
 	python3 -m http.server 8099 --directory site
+
+site-build:          ## Inject the shared header/footer from Scripts/site-partials into site/*.html
+	./Scripts/site-build.py
+
+site-check:          ## Fail if any page is out of date with its partials
+	./Scripts/site-build.py --check
 
 site-assets:         ## Rebuild site/assets from the renders in docs/screenshots
 	./Scripts/site-assets.sh

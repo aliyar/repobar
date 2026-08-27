@@ -174,6 +174,7 @@ echo "  $(du -h "$ZIP" | cut -f1) $ZIP"
 # After notarization, never before: stapling rewrites the archive, so the checksum the page
 # publishes has to be taken from the file that actually ships.
 step "Pointing the landing page at $TAG"
+Scripts/site-build.py --check >/dev/null || die "site pages are out of date with their partials — run: make site-build"
 Scripts/site-version.sh "$VERSION" "$ZIP" "$REPO"
 
 # ---------- release notes → HTML for the appcast ----------
