@@ -44,15 +44,19 @@ public enum AcknowledgementRules {
     /// Whether to remind about commits that have been sitting unpushed. `after` is how
     /// long a branch may stay ahead before the first reminder; the reminder then repeats
     /// at most once a day so a long-lived branch does not nag.
+    /// `trackingUpstream` must be true: `ahead` counts HEAD against the *watched* ref, which is
+    /// only the branch's own upstream in upstream mode. Watching a different branch — or having
+    /// no upstream at all — makes every commit on HEAD look unpushed when it is not.
     public static func shouldRemindAboutUnpushed(
         ahead: Int,
         aheadSince: Date?,
         lastReminded: Date?,
         after: Duration?,
         muted: Bool,
+        trackingUpstream: Bool,
         now: Date
     ) -> Bool {
-        guard let after, ahead > 0, !muted, let aheadSince else { return false }
+        guard trackingUpstream, let after, ahead > 0, !muted, let aheadSince else { return false }
         let seconds = Double(after.components.seconds)
         guard now.timeIntervalSince(aheadSince) >= seconds else { return false }
         guard let lastReminded else { return true }

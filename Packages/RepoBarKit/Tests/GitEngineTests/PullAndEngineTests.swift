@@ -86,6 +86,119 @@ struct RepoEngineTests {
         return (engine, dir)
     }
 
+    /// The snapshot is minutes old by the time Pull is clicked; the merge would move whatever
+    /// HEAD points at now. `git switch -c` keeps the SHA, so only the branch name gives it away.
+    @Test func pullRefusesWhenTheCheckedOutBranchChanged() async throws {
+        let fx = try await GitFixture()
+        let remote = try await fx.makeRemote()
+        let a = try await fx.clone(remote, as: "A")
+        let b = try await fx.clone(remote, as: "B")
+        try await fx.commit(in: b, file: "n.txt", content: "n", message: "news")
+        try await fx.push(in: b)
+        let record = try await fx.record(for: a)
+        let outcome = await fx.check(record)
+        #expect(outcome.snapshot.behind == 1)
+
+        let mainSHA = try await fx.head(of: a)
+        _ = try await fx.sh(["switch", "-q", "-c", "topic"], in: a)
+        let service = PullService(git: fx.git)
+        await #expect(throws: PullRefusal.headMoved) {
+            try await service.pull(record: record, snapshot: outcome.snapshot)
+        }
+        #expect(try await fx.head(of: a) == mainSHA, "topic must not have been fast-forwarded")
+        _ = try await fx.sh(["switch", "-q", "main"], in: a)
+        #expect(try await fx.head(of: a) == mainSHA, "main must not have moved either")
+    }
+
+    /// Suppressing the first notification has to set a baseline. Otherwise the next check sees
+    /// the same tip with lastNotified still nil and announces commits that pre-date the add.
+    @Test func addingABehindCloneNeverNotifiesAboutItsBacklog() async throws {
+        let fx = try await GitFixture()
+        let remote = try await fx.makeRemote()
+        let a = try await fx.clone(remote, as: "A")
+        let b = try await fx.clone(remote, as: "B")
+        for index in 1...3 {
+            try await fx.commit(in: b, file: "\(index).txt", content: "\(index)", message: "old \(index)")
+        }
+        try await fx.push(in: b)
+        let (engine, _) = makeEngine(fx)
+        let collector = EventCollector(engine.events)
+        await engine.start()
+
+        let record = try await engine.add(path: a)
+        await engine.waitForIdle()
+        #expect(await engine.state(for: record.id)?.lastSnapshot?.unseenCount == 3, "the backlog still lights up")
+
+        await engine.checkNow(record.id)
+        await engine.checkNow(record.id)
+        try? await Task.sleep(for: .milliseconds(200))
+        #expect(await collector.notifications.isEmpty, "commits that pre-date the add are never announced")
+        await collector.stop()
+    }
+
+    /// apply() runs with the record the check captured. Muting mid-check must still count.
+    @Test func mutingDuringACheckSuppressesItsNotification() async throws {
+        let fx = try await GitFixture()
+        let remote = try await fx.makeRemote()
+        let a = try await fx.clone(remote, as: "A")
+        let b = try await fx.clone(remote, as: "B")
+        let (engine, _) = makeEngine(fx)
+        let collector = EventCollector(engine.events)
+        await engine.start()
+        let record = try await engine.add(path: a)
+        await engine.waitForIdle()
+
+        try await fx.commit(in: b, file: "n.txt", content: "n", message: "news")
+        try await fx.push(in: b)
+
+        fx.runner.hold("fetch", for: .milliseconds(600))
+        let check = Task { await engine.checkNow(record.id) }
+        try await Task.sleep(for: .milliseconds(200))
+        var muted = record
+        muted.notificationsMuted = true
+        await engine.update(muted)
+        await check.value
+        fx.runner.hold("", for: .zero)
+
+        try? await Task.sleep(for: .milliseconds(200))
+        #expect(await engine.state(for: record.id)?.lastSnapshot?.unseenCount == 1, "the commit is still found")
+        #expect(await collector.notifications.isEmpty, "a mute applied mid-check still silences its result")
+        await collector.stop()
+    }
+
+    /// A check that ends without a tip carries a state copy that predates markSeen; writing it
+    /// back would erase the acknowledgement and light the commits up again.
+    @Test func acknowledgementSurvivesACheckThatEndsWithoutATip() async throws {
+        let fx = try await GitFixture()
+        let remote = try await fx.makeRemote()
+        let a = try await fx.clone(remote, as: "A")
+        let b = try await fx.clone(remote, as: "B")
+        let (engine, _) = makeEngine(fx)
+        await engine.start()
+        let record = try await engine.add(path: a)
+        await engine.waitForIdle()   // add starts a check; checkNow would otherwise join it
+        try await fx.commit(in: b, file: "n.txt", content: "n", message: "news")
+        try await fx.push(in: b)
+        await engine.checkNow(record.id)
+        let tip = try #require(await engine.state(for: record.id)?.lastSnapshot?.watchedTipSHA)
+        #expect(await engine.state(for: record.id)?.lastSnapshot?.unseenCount == 1)
+
+        // The branch disappears from the remote: the next check stops at the probe with no tip.
+        _ = try await fx.sh(["branch", "-D", "main"], in: remote)
+
+        fx.runner.hold("ls-remote", for: .milliseconds(600))
+        let check = Task { await engine.checkNow(record.id) }
+        try await Task.sleep(for: .milliseconds(200))
+        await engine.markSeen(record.id)
+        await check.value
+        fx.runner.hold("", for: .zero)
+
+        let state = try #require(await engine.state(for: record.id))
+        #expect(state.lastSnapshot?.watchedTipSHA == nil, "the check really did end without a tip")
+        #expect(state.lastSeenSHA["origin/main"] == tip, "the acknowledgement survives")
+        #expect(state.lastNotifiedSHA["origin/main"] == tip)
+    }
+
     @Test func addCheckNotifyMarkSeenRemove() async throws {
         let fx = try await GitFixture()
         let remote = try await fx.makeRemote()

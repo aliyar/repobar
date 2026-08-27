@@ -21,8 +21,10 @@ public struct GitInstallation: Sendable, Hashable, Codable {
 
     /// `git fetch --porcelain` exists since 2.41.
     public var supportsFetchPorcelain: Bool { isAtLeast(2, 41) }
-    /// Hard floor: `--show-current`, `--no-write-fetch-head` etc.
-    public var isSupported: Bool { isAtLeast(2, 29) }
+    /// Hard floor: `rev-parse --path-format=absolute`, used by validate() and pull(), landed in
+    /// 2.31. Older git does not reject the unknown flag — it echoes it as an extra first line
+    /// and exits 0, so every parsed field shifts by one and repositories register as "/false".
+    public var isSupported: Bool { isAtLeast(2, 31) }
 
     /// Parses "git version 2.50.1 (Apple Git-155)".
     public static func parseVersion(_ text: String, url: URL) -> GitInstallation? {

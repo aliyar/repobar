@@ -246,8 +246,12 @@ public actor RepoEngine {
         }
     }
 
-    private func apply(_ outcome: CheckOutcome, for record: RepoRecord) {
+    private func apply(_ outcome: CheckOutcome, for captured: RepoRecord) {
         let now = Date()
+        // The check captured its record when it started, up to a fetch timeout ago. Mute,
+        // rename and the rest must be read live, or muting a repository while its check is
+        // in flight still produces a notification — under the old name, if it was renamed.
+        let record = records.first { $0.id == captured.id } ?? captured
         let previous = states[record.id] ?? RepoState()
         var state = outcome.state
         var snapshot = outcome.snapshot
@@ -275,10 +279,18 @@ public actor RepoEngine {
         }
 
         // "Mark as seen" requested while this check was running wins over the check's result.
-        if pendingSeen.remove(record.id) != nil, let watched = snapshot.watched, let tip = snapshot.watchedTipSHA {
-            state.lastSeenSHA[watched.key] = tip
-            snapshot.unseenCount = 0
-            for index in snapshot.incoming.indices { snapshot.incoming[index].isNew = false }
+        if pendingSeen.remove(record.id) != nil {
+            if let watched = snapshot.watched, let tip = snapshot.watchedTipSHA {
+                state.lastSeenSHA[watched.key] = tip
+                snapshot.unseenCount = 0
+                for index in snapshot.incoming.indices { snapshot.incoming[index].isNew = false }
+            } else {
+                // No tip to acknowledge (transient failure, offline, ref gone). `state` is the
+                // copy this check took before markSeen wrote to it, so keep the live ledgers
+                // rather than reverting them and lighting the commits up again.
+                state.lastSeenSHA = previous.lastSeenSHA
+                state.lastNotifiedSHA = previous.lastNotifiedSHA
+            }
         }
 
         let snoozed = settings.notificationsSnoozedUntil.map { now < $0 } ?? false
@@ -292,11 +304,12 @@ public actor RepoEngine {
                 hadSuccessfulCheckBefore: previous.lastSuccessAt != nil
             )
             if notify {
-                state.lastNotifiedSHA[watched.key] = tip
                 continuation.yield(.notify(record, snapshot))
-            } else if snapshot.unseenCount == 0 {
-                state.lastNotifiedSHA[watched.key] = tip
             }
+            // Recorded either way. Skipping it when the first check is suppressed would only
+            // delay that notification to the next check, which then reports commits that
+            // pre-date the repository being added.
+            state.lastNotifiedSHA[watched.key] = tip
         }
 
         if snapshot.error == nil {
@@ -306,12 +319,14 @@ public actor RepoEngine {
             } else if state.aheadSince == nil {
                 state.aheadSince = now
             }
+            let trackingUpstream = snapshot.upstream != nil && snapshot.watched?.key == snapshot.upstream?.key
             if AcknowledgementRules.shouldRemindAboutUnpushed(
                 ahead: snapshot.ahead,
                 aheadSince: state.aheadSince,
                 lastReminded: state.lastUnpushedReminderAt,
                 after: settings.unpushedReminderAfter,
                 muted: muted,
+                trackingUpstream: trackingUpstream,
                 now: now
             ) {
                 state.lastUnpushedReminderAt = now

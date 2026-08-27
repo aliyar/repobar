@@ -5,6 +5,14 @@ public enum CheckReason: String, Sendable, Hashable {
 
     /// Manual reasons bypass backoff and due-time.
     public var isManual: Bool { self == .manual || self == .manualAll || self == .afterPull }
+
+    /// Reasons that ignore backoff. A fatal failure parks `backoffUntil` at `.distantFuture`,
+    /// and these are exactly the events that undo such a failure: the drive came back, the
+    /// user pointed us at a git binary, the app relaunched, the network returned. Without
+    /// this the hint "RepoBar will retry automatically" is never honoured.
+    public var bypassesBackoff: Bool {
+        isManual || self == .volumeMounted || self == .settingsChanged || self == .launch || self == .networkUp
+    }
 }
 
 /// Decides which repositories are due for a check. Pure and deterministic (jitter derives from the id).
@@ -18,7 +26,7 @@ public struct SchedulePlanner: Sendable {
 
     public func isDue(state: RepoState?, now: Date, interval: Duration, lowPower: Bool, reason: CheckReason) -> Bool {
         if reason.isManual { return true }
-        if let until = state?.backoffUntil, until > now { return false }
+        if !reason.bypassesBackoff, let until = state?.backoffUntil, until > now { return false }
         guard let lastAttempt = state?.lastAttemptAt else { return true }
         let elapsed = now.timeIntervalSince(lastAttempt)
         switch reason {

@@ -8,6 +8,7 @@ public enum PullRefusal: Error, Sendable, Hashable {
     case nothingToPull
     case diverged
     case workingTreeDirty
+    case headMoved
     case operationInProgress(String)
 
     public var message: String {
@@ -19,6 +20,7 @@ public enum PullRefusal: Error, Sendable, Hashable {
         case .nothingToPull: "Already up to date."
         case .diverged: "Local branch has diverged — pull manually (merge or rebase)."
         case .workingTreeDirty: "Working tree has changes — commit or stash first."
+        case .headMoved: "The checked-out branch changed since the last check — check again first."
         case .operationInProgress(let what): "A \(what) is in progress — finish or abort it first."
         }
     }
@@ -60,11 +62,18 @@ public struct PullService: Sendable {
 
     public func pull(record: RepoRecord, snapshot: RepoSnapshot?) async throws -> PullResult {
         try Self.preflight(snapshot: snapshot)
-        guard let snapshot, let watched = snapshot.watched, let from = snapshot.head?.sha else { throw PullRefusal.noSnapshot }
+        guard let snapshot, let watched = snapshot.watched,
+              case .branch(let branch, let from)? = snapshot.head else { throw PullRefusal.noSnapshot }
         let repo = record.url
 
-        let gitDirOut = try await git.run(["rev-parse", "--path-format=absolute", "--git-dir"], in: repo)
-        let gitDir = URL(fileURLWithPath: gitDirOut.stdoutText.trimmingCharacters(in: .whitespacesAndNewlines), isDirectory: true)
+        // The snapshot is as old as the last check, and the merge below fast-forwards
+        // whatever HEAD points at *now*. Re-read it first: `git switch -c topic` keeps the
+        // same SHA, so only the branch name reveals that we would move the wrong ref.
+        let out = try await git.run(["rev-parse", "--path-format=absolute", "--git-dir", "HEAD", "--abbrev-ref", "HEAD"], in: repo)
+        let lines = out.stdoutText.split(whereSeparator: \.isNewline).map(String.init)
+        guard lines.count >= 3 else { throw PullRefusal.noSnapshot }
+        guard lines[1] == from, lines[2] == branch else { throw PullRefusal.headMoved }
+        let gitDir = URL(fileURLWithPath: lines[0], isDirectory: true)
         for (marker, name) in Self.inProgressMarkers where FileManager.default.fileExists(atPath: gitDir.appendingPathComponent(marker).path) {
             throw PullRefusal.operationInProgress(name)
         }

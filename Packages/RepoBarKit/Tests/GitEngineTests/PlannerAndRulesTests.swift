@@ -55,6 +55,88 @@ struct SchedulePlannerTests {
     }
 }
 
+@Suite("Backoff recovery")
+struct BackoffRecoveryTests {
+    let planner = SchedulePlanner()
+    let now = Date(timeIntervalSince1970: 1_700_000_000)
+
+    /// A fatal failure parks backoff at .distantFuture; only the triggers that can undo it pass.
+    func parked() -> RepoState {
+        var state = RepoState()
+        state.backoffUntil = .distantFuture
+        state.lastAttemptAt = Date(timeIntervalSince1970: 1_600_000_000)
+        return state
+    }
+
+    @Test func recoveryTriggersIgnoreAFatalBackoff() {
+        for reason in [CheckReason.volumeMounted, .settingsChanged, .launch, .networkUp] {
+            #expect(planner.isDue(state: parked(), now: now, interval: .seconds(300), lowPower: false, reason: reason),
+                    "\(reason) exists to recover from the failure that set this backoff")
+        }
+    }
+
+    @Test func routineTriggersStillRespectIt() {
+        for reason in [CheckReason.interval, .wake, .panelOpened] {
+            #expect(!planner.isDue(state: parked(), now: now, interval: .seconds(300), lowPower: false, reason: reason),
+                    "\(reason) must not hammer a repository that is parked")
+        }
+    }
+
+    @Test func manualAlwaysWins() {
+        for reason in [CheckReason.manual, .manualAll, .afterPull] {
+            #expect(planner.isDue(state: parked(), now: now, interval: .seconds(300), lowPower: false, reason: reason))
+        }
+    }
+}
+
+@Suite("Unpushed reminder")
+struct UnpushedReminderTests {
+    let now = Date(timeIntervalSince1970: 1_700_000_000)
+
+    func remind(trackingUpstream: Bool, ahead: Int = 40) -> Bool {
+        AcknowledgementRules.shouldRemindAboutUnpushed(
+            ahead: ahead,
+            aheadSince: now.addingTimeInterval(-2 * 86_400),
+            lastReminded: nil,
+            after: .seconds(86_400),
+            muted: false,
+            trackingUpstream: trackingUpstream,
+            now: now
+        )
+    }
+
+    @Test func onlyWhenAheadIsMeasuredAgainstTheBranchesOwnUpstream() {
+        #expect(remind(trackingUpstream: true))
+        // Watching another branch, or having no upstream: `ahead` counts commits that are
+        // pushed — reminding about them is wrong.
+        #expect(!remind(trackingUpstream: false))
+    }
+
+    @Test func stillNeedsSomethingAhead() {
+        #expect(!remind(trackingUpstream: true, ahead: 0))
+    }
+}
+
+@Suite("Git version floor")
+struct GitFloorTests {
+    func installation(_ major: Int, _ minor: Int) -> GitInstallation {
+        GitInstallation(url: URL(fileURLWithPath: "/usr/bin/git"), version: "\(major).\(minor).0", major: major, minor: minor, patch: 0)
+    }
+
+    /// rev-parse --path-format=absolute landed in 2.31; older git silently shifts every parsed line.
+    @Test func floorIsTwoThirtyOne() {
+        #expect(!installation(2, 29).isSupported)
+        #expect(!installation(2, 30).isSupported)
+        #expect(installation(2, 31).isSupported)
+        #expect(installation(2, 51).isSupported)
+    }
+
+    @Test func porcelainStaysGatedAtTwoFortyOne() {
+        #expect(!installation(2, 40).supportsFetchPorcelain)
+        #expect(installation(2, 41).supportsFetchPorcelain)
+    }
+}
+
 @Suite("BackoffPolicy")
 struct BackoffPolicyTests {
     let policy = BackoffPolicy()
