@@ -191,6 +191,8 @@ public struct RepoRecord: Codable, Sendable, Hashable, Identifiable {
     public var webURLOverride: String?
     public var notificationsMuted: Bool
     public var includeUntracked: Bool
+    /// Bundle id this repository was last opened with (UI layer); nil → the global default app.
+    public var lastOpenedAppBundleID: String?
     public var addedAt: Date
     public var sortOrder: Int
 
@@ -206,6 +208,7 @@ public struct RepoRecord: Codable, Sendable, Hashable, Identifiable {
         webURLOverride: String? = nil,
         notificationsMuted: Bool = false,
         includeUntracked: Bool = true,
+        lastOpenedAppBundleID: String? = nil,
         addedAt: Date = Date(),
         sortOrder: Int = 0
     ) {
@@ -220,6 +223,7 @@ public struct RepoRecord: Codable, Sendable, Hashable, Identifiable {
         self.webURLOverride = webURLOverride
         self.notificationsMuted = notificationsMuted
         self.includeUntracked = includeUntracked
+        self.lastOpenedAppBundleID = lastOpenedAppBundleID
         self.addedAt = addedAt
         self.sortOrder = sortOrder
     }

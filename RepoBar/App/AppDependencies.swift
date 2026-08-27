@@ -81,6 +81,7 @@ final class AppDependencies {
         model.start()
         triggers.start()
         observeMenuBarState()
+        observeAppearance()
         observeUpdateState()
         updates.start()
         Log.ui.notice("RepoBar started")
@@ -95,6 +96,16 @@ final class AppDependencies {
         }
         statusItem.updateAvailableVersion = version
         if version == nil { notifications.clearUpdateNotification() }
+    }
+
+    /// Applies the user's appearance choice to the popover.
+    private func observeAppearance() {
+        let appearance = withObservationTracking {
+            settings.appearance
+        } onChange: { [weak self] in
+            Task { @MainActor in self?.observeAppearance() }
+        }
+        statusItem.appearance = appearance.nsAppearance
     }
 
     /// Re-renders the status item whenever the derived menu bar state changes.

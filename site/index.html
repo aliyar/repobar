@@ -358,7 +358,7 @@
       <div class="row row--flip">
         <div class="row-text">
           <h3>Pull, without the part where you get it wrong</h3>
-          <p class="prose">Pull is fast-forward only. No merge commits, no rebase, no surprises. If your branch has diverged or your working tree is dirty, RepoBar refuses and says which. <b>Mark as seen</b> clears the dot without changing a single byte. <b>Open in</b> takes you to Finder, Terminal, VS Code, Cursor, Xcode, Fork or Tower, listing the ones you actually have installed.</p>
+          <p class="prose">Pull is fast-forward only. No merge commits, no rebase, no surprises. If your branch has diverged or your working tree is dirty, RepoBar refuses and says which. <b>Mark as seen</b> clears the dot without changing a single byte.</p>
         </div>
         <figure class="row-media shot">
           <picture>
@@ -374,18 +374,20 @@
       <div class="row">
         <div class="row-text">
           <h3>Set it once and forget the app exists</h3>
-          <p class="prose">Check every 1 to 60 minutes, launch at login, notifications, the default <b>Open in</b> app, and the menu bar style with a live preview of your own repositories. Advanced holds the parts you touch once: which <span class="mono">git</span> binary to use, extra <span class="mono">PATH</span> entries so your credential helper is found, the fetch timeout, how many checks run at a time, and whether to probe with <span class="mono">ls-remote</span> before fetching.</p>
+          <p class="prose">Check every 1 to 60 minutes, a light, dark or system appearance, launch at login, notifications, the default <b>Open in</b> application, and the menu bar style with a live preview of your own repositories. Advanced holds the parts you touch once: which <span class="mono">git</span> binary to use, extra <span class="mono">PATH</span> entries so your credential helper is found, the fetch timeout, how many checks run at a time, and whether to probe with <span class="mono">ls-remote</span> before fetching.</p>
         </div>
         <figure class="row-media shot" id="settings-shot">
           <picture>
             <source media="(prefers-color-scheme: dark)" srcset="/assets/settings-dark.webp" type="image/webp">
             <source media="(prefers-color-scheme: dark)" srcset="/assets/settings-dark.png">
             <source srcset="/assets/settings-light.webp" type="image/webp">
-            <img src="/assets/settings-light.png" width="492" height="663" loading="lazy" decoding="async"
-                 alt="RepoBar Settings, General tab: check interval, launch at login, notifications, open repositories in, and the menu bar style with a live preview.">
+            <img src="/assets/settings-light.png" width="492" height="847" loading="lazy" decoding="async"
+                 alt="RepoBar Settings, General tab: check interval, appearance, launch at login, notifications, the Open In section with its default application, and the menu bar style with a live preview.">
           </picture>
         </figure>
       </div>
+
+      <p class="beat"><b>Open in</b> sends a repository straight to wherever you work on it — Finder, Terminal, iTerm, Ghostty, VS&nbsp;Code, Cursor, Zed, Xcode, Fork, Tower — offering the ones you actually have installed, and anything else you add yourself. Each repository remembers what you opened it with last, so the button is already right the next time.</p>
 
       <p class="beat">When something lands, you get one notification with <b>Open</b> and <b>Pull</b> on it. Repositories you would rather not hear from can be muted individually, and RepoBar never notifies you twice about the same commits.</p>
     </div>

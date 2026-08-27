@@ -10,6 +10,10 @@ final class AppModel {
     let settings: AppSettings
 
     private(set) var records: [RepoRecord] = []
+    /// Everything a repository can be opened with: the built-in catalog narrowed to
+    /// what is installed, plus the apps the user added by hand. Stored rather than
+    /// computed so SwiftUI reliably re-renders when it changes.
+    private(set) var openApps: [ExternalApp] = []
     private(set) var snapshots: [RepoID: RepoSnapshot] = [:]
     private(set) var checking: Set<RepoID> = []
     private(set) var gitInstallation: GitInstallation?
@@ -35,6 +39,7 @@ final class AppModel {
     init(engine: RepoEngine, settings: AppSettings) {
         self.engine = engine
         self.settings = settings
+        refreshOpenApps()
         settings.onEngineSettingsChange = { [weak self] in
             guard let self else { return }
             let engineSettings = settings.engineSettings
@@ -173,6 +178,7 @@ final class AppModel {
 
     func panelDidOpen() {
         toast = nil
+        refreshOpenApps()
         guard settings.refreshOnPanelOpen else { return }
         Task { await engine.trigger(.panelOpened) }
     }
@@ -324,15 +330,59 @@ final class AppModel {
 
     // MARK: - Opening things
 
+    /// Rebuilds `openApps`. Called when the list can have changed: at launch, when the
+    /// user adds or removes one, and every time the panel opens (apps come and go on disk).
+    func refreshOpenApps() {
+        let all = ExternalAppCatalog.installed() + settings.customOpenAppBundleIDs.compactMap(ExternalAppCatalog.customApp(bundleID:))
+        // Group by kind so the panel's sections and the Settings picker agree on the order.
+        openApps = ExternalApp.Kind.allCases.flatMap { kind in all.filter { $0.kind == kind } }
+    }
+
     func defaultOpenApp() -> ExternalApp {
-        ExternalAppCatalog.app(withID: settings.defaultOpenAppBundleID).flatMap { app in
-            ExternalAppCatalog.installed().contains(app) ? app : nil
-        } ?? .finder
+        openApps.first { $0.id == settings.defaultOpenAppBundleID } ?? .finder
+    }
+
+    /// What the panel offers first for one repository: the app it was last opened
+    /// with, falling back to the global default while it has never been opened.
+    func openApp(for id: RepoID) -> ExternalApp {
+        guard let bundleID = records.first(where: { $0.id == id })?.lastOpenedAppBundleID,
+              let app = openApps.first(where: { $0.id == bundleID })
+        else { return defaultOpenApp() }
+        return app
+    }
+
+    /// Adds an application the built-in catalog does not know about and returns it;
+    /// nil when the chosen bundle has no identifier.
+    @discardableResult
+    func addCustomOpenApp(at url: URL) -> ExternalApp? {
+        guard let bundleID = Bundle(url: url)?.bundleIdentifier else { return nil }
+        if let existing = openApps.first(where: { $0.id == bundleID }) { return existing }
+        settings.customOpenAppBundleIDs.append(bundleID)
+        refreshOpenApps()
+        return openApps.first { $0.id == bundleID }
+    }
+
+    func removeCustomOpenApp(_ bundleID: String) {
+        settings.customOpenAppBundleIDs.removeAll { $0 == bundleID }
+        refreshOpenApps()
+        if settings.defaultOpenAppBundleID == bundleID { settings.defaultOpenAppBundleID = ExternalApp.finder.id }
+        for (index, record) in records.enumerated() where record.lastOpenedAppBundleID == bundleID {
+            var updated = record
+            updated.lastOpenedAppBundleID = nil
+            records[index] = updated
+            Task { await engine.update(updated) }
+        }
     }
 
     func open(_ id: RepoID, in app: ExternalApp? = nil) {
-        guard let record = records.first(where: { $0.id == id }) else { return }
-        OpenInService.open(record.url, in: app ?? defaultOpenApp())
+        guard var record = records.first(where: { $0.id == id }) else { return }
+        let target = app ?? openApp(for: id)
+        if record.lastOpenedAppBundleID != target.id {
+            record.lastOpenedAppBundleID = target.id
+            if let index = records.firstIndex(where: { $0.id == id }) { records[index] = record }
+            Task { await engine.update(record) }
+        }
+        OpenInService.open(record.url, in: target)
     }
 
     func copyPath(_ id: RepoID) {

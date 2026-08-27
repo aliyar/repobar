@@ -1,11 +1,13 @@
 import SwiftUI
 import ServiceManagement
+import UniformTypeIdentifiers
 import UserNotifications
 
 struct GeneralSettingsView: View {
     @Environment(AppModel.self) private var model
     @Environment(LoginItemController.self) private var loginItem
     @Environment(NotificationManager.self) private var notifications
+    @State private var addApplicationError: String?
 
     var body: some View {
         @Bindable var settings = model.settings
@@ -17,6 +19,10 @@ struct GeneralSettingsView: View {
                         Text(Self.intervalLabel(seconds)).tag(seconds)
                     }
                 }
+                Picker("Appearance", selection: $settings.appearance) {
+                    ForEach(AppAppearance.allCases, id: \.self) { Text($0.displayName).tag($0) }
+                }
+                .pickerStyle(.segmented)
                 Toggle("Launch at login", isOn: $loginItem.isEnabled)
                 if loginItem.requiresApproval {
                     HStack {
@@ -43,8 +49,11 @@ struct GeneralSettingsView: View {
                         }.controlSize(.small)
                     }
                 }
-                Picker("Open repositories in", selection: $settings.defaultOpenAppBundleID) {
-                    ForEach(ExternalAppCatalog.installed()) { app in
+            }
+
+            Section("Open In") {
+                Picker("Default application", selection: $settings.defaultOpenAppBundleID) {
+                    ForEach(model.openApps) { app in
                         Label {
                             Text(app.name)
                         } icon: {
@@ -52,6 +61,25 @@ struct GeneralSettingsView: View {
                         }
                         .tag(app.id)
                     }
+                }
+                Text("Used for repositories you have not opened yet; afterwards each repository remembers the app you last opened it with.")
+                    .font(.caption).foregroundStyle(.secondary)
+                ForEach(model.openApps.filter { $0.kind == .custom }) { app in
+                    HStack {
+                        if let icon = OpenInService.icon(for: app) { Image(nsImage: icon) }
+                        Text(app.name)
+                        Spacer()
+                        Button("Remove") { model.removeCustomOpenApp(app.id) }.controlSize(.small)
+                    }
+                }
+                HStack {
+                    if let error = addApplicationError {
+                        Text(error).font(.caption).foregroundStyle(.red)
+                    } else {
+                        Text("Any application that is not in the list.").font(.caption).foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    Button("Add Application…") { chooseApplication() }.controlSize(.small)
                 }
             }
 
@@ -88,6 +116,26 @@ struct GeneralSettingsView: View {
             loginItem.refresh()
             notifications.refreshAuthorizationStatus()
         }
+    }
+
+    /// Lets the user point at any application the built-in catalog does not list.
+    private func chooseApplication() {
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = true
+        panel.canChooseDirectories = false
+        panel.allowsMultipleSelection = false
+        panel.allowedContentTypes = [.applicationBundle]
+        panel.directoryURL = URL(fileURLWithPath: "/Applications")
+        panel.message = "Choose an application to open repositories in"
+        panel.prompt = "Add"
+        AppActivation.activate()
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        guard let app = model.addCustomOpenApp(at: url) else {
+            addApplicationError = "\(url.deletingPathExtension().lastPathComponent) has no bundle identifier"
+            return
+        }
+        addApplicationError = nil
+        model.settings.defaultOpenAppBundleID = app.id
     }
 
     static func intervalLabel(_ seconds: Int) -> String {

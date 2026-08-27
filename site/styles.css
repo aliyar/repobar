@@ -58,7 +58,7 @@
   --radius:   8px;
   --radius-lg: 14px;
 
-  --gutter: 34px;          /* rail column width */
+  --gutter: 44px;          /* rail column width — keeps the rails clear of the text */
   --cap-top: 76px;         /* aligns the rail heads with the loupe’s dots */
   --cap-size: 7px;
   --rail-gap: 6px;
@@ -776,6 +776,7 @@ h3 {
   border-top: 1px solid var(--hairline);
   max-width: 62ch; color: var(--text-2);
 }
+.beat + .beat { margin-top: var(--s8); }
 
 /* ── the run (commands) ────────────────────────────────────────────────── */
 .run { margin: var(--s10) 0 0; padding: 0; list-style: none; counter-reset: run; display: grid; gap: var(--s6); }

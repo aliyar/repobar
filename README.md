@@ -35,7 +35,7 @@ GitHub/GitLab, fast-forward your branch, or jump into the repository with your e
 ## Highlights
 
 - **Glanceable.** One colored dot per repository in the menu bar: filled when the remote is ahead of you,
-  faded when you're up to date, a ring with `!` when a check failed. Prefer a number? Switch to the *Count* style.
+  a hollow ring when you're up to date, a ring with `!` when a check failed. Prefer a number? Switch to the *Count* style.
 - **Honest about your repositories.** Checks use `git ls-remote` and only `fetch` when the branch tip moved.
   RepoBar never touches your working tree, never runs `gc`, and never prompts for credentials — it uses the
   same SSH keys, agent and credential helpers your terminal does.

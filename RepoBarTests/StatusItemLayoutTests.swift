@@ -13,13 +13,13 @@ struct StatusItemLayoutTests {
         var state = MenuBarState(repos: dots([(.red, 2, false), (.blue, 0, false), (.green, 0, true)]))
         state.style = .dots
         let layout = StatusItemLayout.make(from: state)
-        #expect(layout.dots.map(\.fill) == [.filled, .faded, .error])
+        #expect(layout.dots.map(\.fill) == [.filled, .ring, .error])
         #expect(layout.dots.map(\.color) == [.red, .blue, .green])
         #expect(layout.overflow == 0)
         #expect(layout.text == nil)
 
-        state.idleDotStyle = .ring
-        #expect(StatusItemLayout.make(from: state).dots[1].fill == .ring)
+        state.idleDotStyle = .faded
+        #expect(StatusItemLayout.make(from: state).dots[1].fill == .faded)
 
         state.showIdleDots = false
         let changedOnly = StatusItemLayout.make(from: state)

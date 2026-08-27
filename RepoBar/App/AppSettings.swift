@@ -18,6 +18,8 @@ final class AppSettings {
     var refreshOnPanelOpen: Bool { didSet { set(refreshOnPanelOpen, "refreshOnPanelOpen") } }
     var markSeenOnExpand: Bool { didSet { set(markSeenOnExpand, "markSeenOnExpand") } }
     var defaultOpenAppBundleID: String { didSet { set(defaultOpenAppBundleID, "defaultOpenAppBundleID") } }
+    var customOpenAppBundleIDs: [String] { didSet { set(customOpenAppBundleIDs, "customOpenAppBundleIDs") } }
+    var appearance: AppAppearance { didSet { set(appearance.rawValue, "appearance") } }
     var menuBarStyle: MenuBarStyle { didSet { set(menuBarStyle.rawValue, "menuBarStyle") } }
     var showIdleDots: Bool { didSet { set(showIdleDots, "showIdleDots") } }
     var idleDotStyle: IdleDotStyle { didSet { set(idleDotStyle.rawValue, "idleDotStyle") } }
@@ -42,9 +44,11 @@ final class AppSettings {
         refreshOnPanelOpen = defaults.object(forKey: "refreshOnPanelOpen") as? Bool ?? true
         markSeenOnExpand = defaults.object(forKey: "markSeenOnExpand") as? Bool ?? false
         defaultOpenAppBundleID = defaults.string(forKey: "defaultOpenAppBundleID") ?? ExternalApp.finder.id
+        customOpenAppBundleIDs = defaults.stringArray(forKey: "customOpenAppBundleIDs") ?? []
+        appearance = AppAppearance(rawValue: defaults.string(forKey: "appearance") ?? "") ?? .system
         menuBarStyle = MenuBarStyle(rawValue: defaults.string(forKey: "menuBarStyle") ?? "") ?? .dots
         showIdleDots = defaults.object(forKey: "showIdleDots") as? Bool ?? true
-        idleDotStyle = IdleDotStyle(rawValue: defaults.string(forKey: "idleDotStyle") ?? "") ?? .faded
+        idleDotStyle = IdleDotStyle(rawValue: defaults.string(forKey: "idleDotStyle") ?? "") ?? .ring
         badgeMode = BadgeMode(rawValue: defaults.string(forKey: "badgeMode") ?? "") ?? .repositories
     }
 

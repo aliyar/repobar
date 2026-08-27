@@ -209,7 +209,7 @@ struct ScreenshotScene {
     func menuBarStyles(_ scheme: ColorScheme) -> some View {
         let base = model.menuBar
         let variants: [(String, String, MenuBarState)] = [
-            ("Dots", "One dot per repository — filled when the remote has new commits, faded when idle, ring + ! on errors.", { var s = base; s.style = .dots; return s }()),
+            ("Dots", "One dot per repository — filled when the remote has new commits, a hollow ring when idle, ring + ! on errors.", { var s = base; s.style = .dots; return s }()),
             ("Count", "The number of repositories (or commits) with new commits.", { var s = base; s.style = .count; return s }()),
             ("Icon only", "Just the glyph, with an accent dot when something is new.", { var s = base; s.style = .iconOnly; return s }()),
         ]

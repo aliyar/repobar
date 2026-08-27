@@ -24,6 +24,10 @@ struct MenuBarPanel: View {
             PanelFooter()
         }
         .frame(width: Self.width)
+        // The popover's own vibrancy lets a busy wallpaper bleed through the commit
+        // list; a translucent ground over it keeps the text readable while the panel
+        // still reads as a popover rather than an opaque window.
+        .background(Color(nsColor: .windowBackgroundColor).opacity(0.55))
         .animation(reduceMotion ? nil : .easeOut(duration: 0.2), value: model.toast)
         .animation(reduceMotion ? nil : .easeOut(duration: 0.2), value: model.pendingDiscovery)
         .overlay {

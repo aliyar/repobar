@@ -50,3 +50,6 @@ site/_*
 
 # local snapshots
 .backups/
+
+# editor settings
+.vscode/

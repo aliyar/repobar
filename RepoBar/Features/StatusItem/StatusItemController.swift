@@ -23,6 +23,11 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
     var onInstallUpdate: (() -> Void)?
     /// Version string of an available app update (adds an item to the context menu).
     var updateAvailableVersion: String?
+    /// nil → follow the system. Applied to the popover only, so the status item glyph
+    /// keeps matching the menu bar rather than the app's chosen theme.
+    var appearance: NSAppearance? {
+        didSet { popover.appearance = appearance }
+    }
 
     // MARK: Private
     private var statusItem: NSStatusItem?

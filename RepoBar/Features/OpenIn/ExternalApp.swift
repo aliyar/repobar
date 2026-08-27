@@ -3,7 +3,7 @@ import AppKit
 /// An application a repository folder can be opened in. Only installed apps are offered.
 nonisolated struct ExternalApp: Identifiable, Hashable, Sendable {
     enum Kind: String, CaseIterable, Sendable {
-        case finder, terminal, editor, gitClient
+        case finder, custom, terminal, editor, gitClient
 
         var title: String {
             switch self {
@@ -11,6 +11,7 @@ nonisolated struct ExternalApp: Identifiable, Hashable, Sendable {
             case .terminal: "Terminals"
             case .editor: "Editors"
             case .gitClient: "Git clients"
+            case .custom: "Added by you"
             }
         }
     }
@@ -56,5 +57,12 @@ nonisolated enum ExternalAppCatalog {
 
     static func app(withID id: String) -> ExternalApp? {
         ExternalApp.catalog.first { $0.id == id }
+    }
+
+    /// An app the user picked by hand. The name is read from the bundle on disk, so
+    /// the entry disappears from the list once the app is deleted.
+    static func customApp(bundleID: String) -> ExternalApp? {
+        guard let url = applicationURL(for: bundleID) else { return nil }
+        return ExternalApp(id: bundleID, name: url.deletingPathExtension().lastPathComponent, kind: .custom)
     }
 }

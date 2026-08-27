@@ -52,7 +52,7 @@ nonisolated struct MenuBarState: Equatable, Sendable {
     var isOffline = false
     var style: MenuBarStyle = .dots
     var showIdleDots = true
-    var idleDotStyle: IdleDotStyle = .faded
+    var idleDotStyle: IdleDotStyle = .ring
     var badgeMode: BadgeMode = .repositories
 
     var unseenRepoCount: Int { repos.filter(\.hasChanges).count }

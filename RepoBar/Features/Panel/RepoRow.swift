@@ -191,15 +191,24 @@ struct RepoRow: View {
     }
 
     private var openMenu: some View {
-        let defaultApp = model.defaultOpenApp()
-        let installed = ExternalAppCatalog.installed()
+        let activeApp = model.openApp(for: item.id)
+        let installed = model.openApps
         return Menu {
             ForEach(ExternalApp.Kind.allCases, id: \.self) { kind in
                 let apps = installed.filter { $0.kind == kind }
                 if !apps.isEmpty {
                     Section(kind.title) {
                         ForEach(apps) { app in
-                            Button(app.name) { model.closePanel?(); model.open(item.id, in: app) }
+                            Button {
+                                model.closePanel?()
+                                model.open(item.id, in: app)
+                            } label: {
+                                if app == activeApp {
+                                    Label(app.name, systemImage: "checkmark")
+                                } else {
+                                    Text(app.name)
+                                }
+                            }
                         }
                     }
                 }
@@ -209,10 +218,10 @@ struct RepoRow: View {
                 Button("Repository page") { model.openRepositoryPage(item.id) }
             }
         } label: {
-            Label("Open in \(defaultApp.name)", systemImage: "arrow.up.forward.app")
+            Label("Open in \(activeApp.name)", systemImage: "arrow.up.forward.app")
         } primaryAction: {
             model.closePanel?()
-            model.open(item.id, in: defaultApp)
+            model.open(item.id, in: activeApp)
         }
         .fixedSize()
     }
@@ -221,11 +230,11 @@ struct RepoRow: View {
 
     @ViewBuilder
     private var contextMenu: some View {
-        let installed = ExternalAppCatalog.installed()
+        let installed = model.openApps
         ForEach(installed.filter { $0.kind == .finder || $0.kind == .terminal }) { app in
             Button("Open in \(app.name)") { model.closePanel?(); model.open(item.id, in: app) }
         }
-        let editors = installed.filter { $0.kind == .editor || $0.kind == .gitClient }
+        let editors = installed.filter { $0.kind != .finder && $0.kind != .terminal }
         if !editors.isEmpty {
             Menu("Open in…") {
                 ForEach(editors) { app in
