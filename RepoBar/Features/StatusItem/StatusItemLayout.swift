@@ -16,14 +16,24 @@ nonisolated struct StatusItemLayout: Equatable, Sendable {
 
     var glyph: Glyph = .branch
     var glyphOpacity: Double = 1
+    /// Nothing is being checked right now — paused or offline. The whole item dims so
+    /// the dots are not read as a live picture.
+    var isDimmed = false
     var dots: [Dot] = []
     var overflow = 0
     var text: String?
     var showsAttentionDot = false
 
+    /// Nothing but the glyph — no dots, no count, no attention dot. True whenever the
+    /// chosen style has nothing to report right now.
+    var showsOnlyGlyph: Bool {
+        dots.isEmpty && overflow == 0 && text == nil && !showsAttentionDot
+    }
+
     static func make(from state: MenuBarState) -> StatusItemLayout {
         var layout = StatusItemLayout()
         layout.glyph = state.isPaused ? .paused : .branch
+        layout.isDimmed = state.isPaused || state.isOffline
         layout.glyphOpacity = state.isOffline ? 0.5 : 1
 
         switch state.style {

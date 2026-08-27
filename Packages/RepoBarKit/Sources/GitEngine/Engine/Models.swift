@@ -132,6 +132,8 @@ public struct RepoSnapshot: Codable, Sendable, Hashable {
     public var networkMode: NetworkMode
     public var remoteURL: String?
     public var web: WebRemote?
+    /// Branches that exist on the watched remote, for the "Watch Branch" menu.
+    public var remoteBranches: [String] = []
     public var error: RepoError?
 
     public init(
@@ -149,6 +151,7 @@ public struct RepoSnapshot: Codable, Sendable, Hashable {
         networkMode: NetworkMode = .notAttempted,
         remoteURL: String? = nil,
         web: WebRemote? = nil,
+        remoteBranches: [String] = [],
         error: RepoError? = nil
     ) {
         self.checkedAt = checkedAt
@@ -165,12 +168,41 @@ public struct RepoSnapshot: Codable, Sendable, Hashable {
         self.networkMode = networkMode
         self.remoteURL = remoteURL
         self.web = web
+        self.remoteBranches = remoteBranches
         self.error = error
     }
 
     public var behind: Int { comparison?.behind ?? 0 }
     public var ahead: Int { comparison?.ahead ?? 0 }
     public var hasUnseen: Bool { unseenCount > 0 }
+
+    // Hand-written like RepoRecord and RepoState: the synthesized decoder throws on a
+    // key that a previously written state.json does not have, which would drop every
+    // stored snapshot the first time a field is added.
+    enum CodingKeys: String, CodingKey {
+        case checkedAt, head, upstream, watched, watchedTipSHA, comparison, unseenCount, incoming
+        case workingTree, isShallow, historyRewritten, networkMode, remoteURL, web, remoteBranches, error
+    }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        checkedAt = try c.decode(Date.self, forKey: .checkedAt)
+        head = try c.decodeIfPresent(HeadState.self, forKey: .head)
+        upstream = try c.decodeIfPresent(WatchedRef.self, forKey: .upstream)
+        watched = try c.decodeIfPresent(WatchedRef.self, forKey: .watched)
+        watchedTipSHA = try c.decodeIfPresent(String.self, forKey: .watchedTipSHA)
+        comparison = try c.decodeIfPresent(BranchComparison.self, forKey: .comparison)
+        unseenCount = try c.decodeIfPresent(Int.self, forKey: .unseenCount) ?? 0
+        incoming = try c.decodeIfPresent([IncomingCommit].self, forKey: .incoming) ?? []
+        workingTree = try c.decodeIfPresent(WorkingTreeState.self, forKey: .workingTree) ?? WorkingTreeState()
+        isShallow = try c.decodeIfPresent(Bool.self, forKey: .isShallow) ?? false
+        historyRewritten = try c.decodeIfPresent(Bool.self, forKey: .historyRewritten) ?? false
+        networkMode = try c.decodeIfPresent(NetworkMode.self, forKey: .networkMode) ?? .notAttempted
+        remoteURL = try c.decodeIfPresent(String.self, forKey: .remoteURL)
+        web = try c.decodeIfPresent(WebRemote.self, forKey: .web)
+        remoteBranches = try c.decodeIfPresent([String].self, forKey: .remoteBranches) ?? []
+        error = try c.decodeIfPresent(RepoError.self, forKey: .error)
+    }
 }
 
 // MARK: - Persistence records
@@ -190,6 +222,8 @@ public struct RepoRecord: Codable, Sendable, Hashable, Identifiable {
     public var remoteOverride: String?
     public var webURLOverride: String?
     public var notificationsMuted: Bool
+    /// Temporary silence; notifications resume by themselves at this date.
+    public var mutedUntil: Date?
     public var includeUntracked: Bool
     /// Bundle id this repository was last opened with (UI layer); nil → the global default app.
     public var lastOpenedAppBundleID: String?
@@ -207,6 +241,7 @@ public struct RepoRecord: Codable, Sendable, Hashable, Identifiable {
         remoteOverride: String? = nil,
         webURLOverride: String? = nil,
         notificationsMuted: Bool = false,
+        mutedUntil: Date? = nil,
         includeUntracked: Bool = true,
         lastOpenedAppBundleID: String? = nil,
         addedAt: Date = Date(),
@@ -222,6 +257,7 @@ public struct RepoRecord: Codable, Sendable, Hashable, Identifiable {
         self.remoteOverride = remoteOverride
         self.webURLOverride = webURLOverride
         self.notificationsMuted = notificationsMuted
+        self.mutedUntil = mutedUntil
         self.includeUntracked = includeUntracked
         self.lastOpenedAppBundleID = lastOpenedAppBundleID
         self.addedAt = addedAt
@@ -231,10 +267,17 @@ public struct RepoRecord: Codable, Sendable, Hashable, Identifiable {
     public var name: String { displayName ?? URL(fileURLWithPath: path).lastPathComponent }
     public var url: URL { URL(fileURLWithPath: path, isDirectory: true) }
 
+    /// Indefinitely muted, or still inside a temporary silence.
+    public func isMuted(at date: Date = Date()) -> Bool {
+        if notificationsMuted { return true }
+        guard let mutedUntil else { return false }
+        return date < mutedUntil
+    }
+
     // Tolerate older files that lack newer keys.
     enum CodingKeys: String, CodingKey {
         case id, path, bookmark, gitCommonDir, displayName, colorID, watch, remoteOverride, webURLOverride
-        case notificationsMuted, includeUntracked, addedAt, sortOrder
+        case notificationsMuted, mutedUntil, includeUntracked, lastOpenedAppBundleID, addedAt, sortOrder
     }
 
     public init(from decoder: Decoder) throws {
@@ -249,7 +292,9 @@ public struct RepoRecord: Codable, Sendable, Hashable, Identifiable {
         remoteOverride = try c.decodeIfPresent(String.self, forKey: .remoteOverride)
         webURLOverride = try c.decodeIfPresent(String.self, forKey: .webURLOverride)
         notificationsMuted = try c.decodeIfPresent(Bool.self, forKey: .notificationsMuted) ?? false
+        mutedUntil = try c.decodeIfPresent(Date.self, forKey: .mutedUntil)
         includeUntracked = try c.decodeIfPresent(Bool.self, forKey: .includeUntracked) ?? true
+        lastOpenedAppBundleID = try c.decodeIfPresent(String.self, forKey: .lastOpenedAppBundleID)
         addedAt = try c.decodeIfPresent(Date.self, forKey: .addedAt) ?? Date()
         sortOrder = try c.decodeIfPresent(Int.self, forKey: .sortOrder) ?? 0
     }
@@ -294,12 +339,16 @@ public struct RepoState: Codable, Sendable, Hashable {
     public var consecutiveFailures = 0
     public var lastFailureKind: FailureKind?
     public var backoffUntil: Date?
+    /// When the branch first went ahead of its remote; cleared once it is pushed.
+    public var aheadSince: Date?
+    public var lastUnpushedReminderAt: Date?
 
     public init() {}
 
     enum CodingKeys: String, CodingKey {
         case lastSeenSHA, lastNotifiedSHA, cachedDefaultBranch, cachedRemoteURL, lastSnapshot
         case lastAttemptAt, lastSuccessAt, consecutiveFailures, lastFailureKind, backoffUntil
+        case aheadSince, lastUnpushedReminderAt
     }
 
     public init(from decoder: Decoder) throws {
@@ -314,6 +363,8 @@ public struct RepoState: Codable, Sendable, Hashable {
         consecutiveFailures = try c.decodeIfPresent(Int.self, forKey: .consecutiveFailures) ?? 0
         lastFailureKind = try c.decodeIfPresent(FailureKind.self, forKey: .lastFailureKind)
         backoffUntil = try c.decodeIfPresent(Date.self, forKey: .backoffUntil)
+        aheadSince = try c.decodeIfPresent(Date.self, forKey: .aheadSince)
+        lastUnpushedReminderAt = try c.decodeIfPresent(Date.self, forKey: .lastUnpushedReminderAt)
     }
 }
 

@@ -115,6 +115,7 @@ public struct RepoChecker: Sendable {
             state.cachedDefaultBranch = resolution.cachedDefaultBranch
             snapshot.upstream = resolution.upstream
             snapshot.watched = resolution.watched
+            snapshot.remoteBranches = resolution.remoteBranches
             if let error = resolution.error {
                 snapshot.error = error
                 return CheckOutcome(snapshot: snapshot, state: state)

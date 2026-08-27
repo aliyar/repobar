@@ -17,18 +17,35 @@ struct PanelHeader: View {
         }
     }
 
+    private var statusText: some View {
+        Text(model.statusLine)
+            .font(.caption.weight(.medium))
+            .foregroundStyle(model.gitMissing ? .red : .secondary)
+            .lineLimit(1)
+            .fixedSize(horizontal: true, vertical: false)
+    }
+
+    private var showsTimestamp: Bool {
+        model.lastRefresh != nil && !model.isRefreshing && !model.records.isEmpty
+    }
+
     private var headerRow: some View {
         HStack(spacing: 8) {
-            VStack(alignment: .leading, spacing: 1) {
-                Text(model.statusLine)
-                    .font(.caption.weight(.medium))
-                    .foregroundStyle(model.gitMissing ? .red : .secondary)
-                    .lineLimit(1)
-                if let lastRefresh = model.lastRefresh, !model.isRefreshing, !model.records.isEmpty {
-                    RelativeTimeText(date: lastRefresh, prefix: "Updated ")
-                        .font(.caption2)
-                        .foregroundStyle(.tertiary)
+            // One line: the second one cost 17pt of header for "Updated just now", which
+            // says nothing most of the time. The timestamp still rides along when the
+            // status is short enough to leave room for it.
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 5) {
+                    statusText
+                    if showsTimestamp {
+                        Text("·").font(.caption2).foregroundStyle(.quaternary)
+                        RelativeTimeText(date: model.lastRefresh!, prefix: "")
+                            .font(.caption2)
+                            .foregroundStyle(.tertiary)
+                            .lineLimit(1)
+                    }
                 }
+                statusText
             }
             Spacer(minLength: 4)
             Button {

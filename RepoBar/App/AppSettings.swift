@@ -14,12 +14,28 @@ final class AppSettings {
     var pruneOnFetch: Bool { didSet { set(pruneOnFetch, "pruneOnFetch"); engineChanged() } }
     var gitPathOverride: String { didSet { set(gitPathOverride, "gitPathOverride"); engineChanged() } }
     var extraPaths: String { didSet { set(extraPaths, "extraPaths"); engineChanged() } }
-    var notificationsEnabled: Bool { didSet { set(notificationsEnabled, "notificationsEnabled") } }
+    var notificationsEnabled: Bool { didSet { set(notificationsEnabled, "notificationsEnabled"); engineChanged() } }
+    /// Every repository stays quiet until this date; nil means notifications are live.
+    var notificationsSnoozedUntil: Date? {
+        didSet { set(notificationsSnoozedUntil, "notificationsSnoozedUntil"); engineChanged() }
+    }
+    var unpushedReminderEnabled: Bool { didSet { set(unpushedReminderEnabled, "unpushedReminderEnabled"); engineChanged() } }
+    var unpushedReminderHours: Int { didSet { set(unpushedReminderHours, "unpushedReminderHours"); engineChanged() } }
     var refreshOnPanelOpen: Bool { didSet { set(refreshOnPanelOpen, "refreshOnPanelOpen") } }
+    /// Folders scanned for clones that are not on the list yet.
+    var watchedFolders: [String] { didSet { set(watchedFolders, "watchedFolders") } }
     var markSeenOnExpand: Bool { didSet { set(markSeenOnExpand, "markSeenOnExpand") } }
     var defaultOpenAppBundleID: String { didSet { set(defaultOpenAppBundleID, "defaultOpenAppBundleID") } }
     var customOpenAppBundleIDs: [String] { didSet { set(customOpenAppBundleIDs, "customOpenAppBundleIDs") } }
     var appearance: AppAppearance { didSet { set(appearance.rawValue, "appearance") } }
+    /// Global shortcut that opens the panel; nil when none is set.
+    var panelShortcut: GlobalHotKey.Shortcut? {
+        didSet {
+            set(panelShortcut.map { Int($0.keyCode) } ?? -1, "panelShortcutKeyCode")
+            set(panelShortcut.map { Int($0.modifiers) } ?? 0, "panelShortcutModifiers")
+            onPanelShortcutChange?()
+        }
+    }
     var menuBarStyle: MenuBarStyle { didSet { set(menuBarStyle.rawValue, "menuBarStyle") } }
     var showIdleDots: Bool { didSet { set(showIdleDots, "showIdleDots") } }
     var idleDotStyle: IdleDotStyle { didSet { set(idleDotStyle.rawValue, "idleDotStyle") } }
@@ -27,8 +43,11 @@ final class AppSettings {
 
     /// Called after any engine-relevant setting changes.
     @ObservationIgnored var onEngineSettingsChange: (() -> Void)?
+    /// Called when the global shortcut changes, so it can be re-registered.
+    @ObservationIgnored var onPanelShortcutChange: (() -> Void)?
 
     static let intervalChoices = [60, 120, 300, 600, 900, 1800, 3600]
+    static let unpushedReminderChoices = [4, 8, 24, 72]
     static let fetchTimeoutChoices = [30, 60, 90, 120]
 
     init(defaults: UserDefaults = .standard) {
@@ -41,11 +60,24 @@ final class AppSettings {
         gitPathOverride = defaults.string(forKey: "gitPathOverride") ?? ""
         extraPaths = defaults.string(forKey: "extraPaths") ?? ""
         notificationsEnabled = defaults.object(forKey: "notificationsEnabled") as? Bool ?? true
+        notificationsSnoozedUntil = defaults.object(forKey: "notificationsSnoozedUntil") as? Date
+        unpushedReminderEnabled = defaults.object(forKey: "unpushedReminderEnabled") as? Bool ?? true
+        unpushedReminderHours = defaults.object(forKey: "unpushedReminderHours") as? Int ?? 24
         refreshOnPanelOpen = defaults.object(forKey: "refreshOnPanelOpen") as? Bool ?? true
+        watchedFolders = defaults.stringArray(forKey: "watchedFolders") ?? []
         markSeenOnExpand = defaults.object(forKey: "markSeenOnExpand") as? Bool ?? false
         defaultOpenAppBundleID = defaults.string(forKey: "defaultOpenAppBundleID") ?? ExternalApp.finder.id
         customOpenAppBundleIDs = defaults.stringArray(forKey: "customOpenAppBundleIDs") ?? []
         appearance = AppAppearance(rawValue: defaults.string(forKey: "appearance") ?? "") ?? .system
+        // No stored value at all means a fresh install: start with the suggested
+        // shortcut. Clearing it writes -1, which is remembered as "none".
+        if let storedKeyCode = defaults.object(forKey: "panelShortcutKeyCode") as? Int {
+            panelShortcut = storedKeyCode >= 0
+                ? GlobalHotKey.Shortcut(keyCode: UInt32(storedKeyCode), modifiers: UInt(defaults.integer(forKey: "panelShortcutModifiers")))
+                : nil
+        } else {
+            panelShortcut = .suggested
+        }
         menuBarStyle = MenuBarStyle(rawValue: defaults.string(forKey: "menuBarStyle") ?? "") ?? .dots
         showIdleDots = defaults.object(forKey: "showIdleDots") as? Bool ?? true
         idleDotStyle = IdleDotStyle(rawValue: defaults.string(forKey: "idleDotStyle") ?? "") ?? .ring
@@ -62,6 +94,10 @@ final class AppSettings {
         let override = gitPathOverride.trimmingCharacters(in: .whitespaces)
         settings.gitPathOverride = override.isEmpty ? nil : override
         settings.extraPaths = extraPaths.split(separator: ":").map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
+        settings.notificationsSnoozedUntil = notificationsSnoozedUntil
+        settings.unpushedReminderAfter = unpushedReminderEnabled && notificationsEnabled
+            ? .seconds(max(1, unpushedReminderHours) * 3600)
+            : nil
         return settings
     }
 

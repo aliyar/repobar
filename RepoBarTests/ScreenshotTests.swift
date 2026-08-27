@@ -158,15 +158,18 @@ struct ScreenshotScene {
             .environment(\.colorScheme, scheme)
     }
 
+    static let settingsTabs = ["General", "Notifications", "Repositories", "Menu Bar", "Advanced", "About"]
+    static let settingsIcons = ["gearshape", "bell", "folder", "menubar.rectangle", "wrench.and.screwdriver", "info.circle"]
+
     /// The Settings window with no canvas and no baked shadow.
     func settingsBare(_ scheme: ColorScheme) -> some View {
-        WindowFrame(title: "General", tabs: ["General", "Advanced", "About"], icons: ["gearshape", "wrench.and.screwdriver", "info.circle"], selected: 0, scheme: scheme) {
+        WindowFrame(title: "General", tabs: Self.settingsTabs, icons: Self.settingsIcons, selected: 0, scheme: scheme) {
             GeneralSettingsView()
                 .environment(model)
                 .environment(loginItem)
                 .environment(notifications)
                 .environment(updates)
-                .frame(width: 480)
+                .frame(width: 640)
         }
         .padding(6)
         .environment(\.colorScheme, scheme)
@@ -247,13 +250,13 @@ struct ScreenshotScene {
     }
 
     func settings(_ scheme: ColorScheme) -> some View {
-        WindowFrame(title: "General", tabs: ["General", "Advanced", "About"], icons: ["gearshape", "wrench.and.screwdriver", "info.circle"], selected: 0, scheme: scheme) {
+        WindowFrame(title: "General", tabs: Self.settingsTabs, icons: Self.settingsIcons, selected: 0, scheme: scheme) {
             GeneralSettingsView()
                 .environment(model)
                 .environment(loginItem)
                 .environment(notifications)
                 .environment(updates)
-                .frame(width: 480)
+                .frame(width: 640)
         }
         .shadow(color: .black.opacity(scheme == .dark ? 0.6 : 0.22), radius: 22, y: 10)
         .padding(44)
@@ -354,9 +357,11 @@ struct WindowFrame<Content: View>: View {
                     ForEach(Array(tabs.enumerated()), id: \.offset) { index, tab in
                         VStack(spacing: 3) {
                             Image(systemName: icons[index]).font(.system(size: 19))
-                            Text(tab).font(.system(size: 11))
+                            Text(tab).font(.system(size: 11)).fixedSize()
                         }
-                        .frame(width: 64, height: 50)
+                        // Width follows the label: a fixed one clipped the longer tab names.
+                        .padding(.horizontal, 10)
+                        .frame(minWidth: 64, minHeight: 50)
                         .foregroundStyle(index == selected ? Color.accentColor : .secondary)
                         .background(index == selected ? Color.primary.opacity(0.08) : .clear, in: RoundedRectangle(cornerRadius: 6))
                     }

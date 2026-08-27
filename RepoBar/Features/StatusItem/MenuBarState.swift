@@ -79,4 +79,15 @@ nonisolated struct MenuBarState: Equatable, Sendable {
         }
         return MenuBarState(repos: dots)
     }()
+
+    /// The sample scenario drawn with someone's own display settings — what the Settings
+    /// preview shows, so switching style or dot options changes the picture immediately.
+    static func sample(styledLike settings: MenuBarState) -> MenuBarState {
+        var state = sample
+        state.style = settings.style
+        state.badgeMode = settings.badgeMode
+        state.showIdleDots = settings.showIdleDots
+        state.idleDotStyle = settings.idleDotStyle
+        return state
+    }
 }

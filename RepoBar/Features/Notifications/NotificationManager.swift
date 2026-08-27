@@ -9,6 +9,7 @@ import GitEngine
 final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
     enum Action: String { case open = "OPEN", pull = "PULL", install = "INSTALL" }
     static let category = "REPO_UPDATE"
+    static let unpushedCategory = "REPO_UNPUSHED"
     static let updateCategory = "APP_UPDATE"
 
     /// Open the panel for a repository (default click).
@@ -33,6 +34,7 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
         let install = UNNotificationAction(identifier: Action.install.rawValue, title: "Install", options: [.foreground])
         center.setNotificationCategories([
             UNNotificationCategory(identifier: Self.category, actions: [open, pull], intentIdentifiers: []),
+            UNNotificationCategory(identifier: Self.unpushedCategory, actions: [open], intentIdentifiers: []),
             UNNotificationCategory(identifier: Self.updateCategory, actions: [install], intentIdentifiers: []),
         ])
         refreshAuthorizationStatus()
@@ -85,6 +87,25 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
         }
     }
 
+    /// A reminder that local commits have not been pushed. It deliberately carries no
+    /// "Push" action: RepoBar never writes to a remote.
+    func postUnpushed(record: RepoRecord, snapshot: RepoSnapshot) {
+        guard let center else { return }
+        let content = UNMutableNotificationContent()
+        content.title = record.name
+        let count = snapshot.ahead
+        let branch = snapshot.head?.branchName ?? "this branch"
+        content.subtitle = "\(count) unpushed \(count == 1 ? "commit" : "commits") on \(branch)"
+        content.body = "Still only on this Mac."
+        content.categoryIdentifier = Self.unpushedCategory
+        content.threadIdentifier = record.id.uuidString
+        content.userInfo = ["repoID": record.id.uuidString]
+        let request = UNNotificationRequest(identifier: "unpushed.\(record.id.uuidString)", content: content, trigger: nil)
+        center.add(request) { error in
+            if let error { Log.notifications.error("unpushed notification failed: \(error.localizedDescription, privacy: .public)") }
+        }
+    }
+
     func postUpdateAvailable(version: String) {
         guard let center else { return }
         let content = UNMutableNotificationContent()
@@ -103,7 +124,7 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
     }
 
     func clear(for id: RepoID) {
-        center?.removeDeliveredNotifications(withIdentifiers: ["repo.\(id.uuidString)"])
+        center?.removeDeliveredNotifications(withIdentifiers: ["repo.\(id.uuidString)", "unpushed.\(id.uuidString)"])
     }
 
     // MARK: UNUserNotificationCenterDelegate

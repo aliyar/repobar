@@ -41,8 +41,15 @@ GitHub/GitLab, fast-forward your branch, or jump into the repository with your e
   same SSH keys, agent and credential helpers your terminal does.
 - **Useful when you click.** Branch, ↓ behind / ↑ ahead, uncommitted-changes dot, the list of incoming commits
   (click one to open it on the web), *Pull* (fast-forward only — no merge commits, refused if the tree is dirty),
-  *Mark as seen*, *Open in* Finder / Terminal / VS Code / Cursor / Xcode / Fork / Tower….
-- **Notifications** when new commits arrive, with *Open* and *Pull* actions; mute per repository.
+  *Mark as seen*, *Open in* Finder / Terminal / VS Code / Cursor / Xcode / Fork / Tower… — or any application
+  you add yourself. Each repository remembers the one you opened it with last.
+- **Notifications** when new commits arrive, with *Open* and *Pull* actions — plus a reminder when your own
+  commits have been sitting unpushed. Silence everything for a while, or one repository at a time; a timed
+  mute lifts itself.
+- **Keyboard-friendly.** A global shortcut opens the panel (⌃⌘R out of the box); arrows move, → expands,
+  ↩ opens the repository. Light, dark or system appearance.
+- **Finds new clones for you.** Point RepoBar at the folder your repositories live in and the ones you clone
+  later show up on their own.
 - **Stays out of the way.** Backs off on auth failures, pauses when offline or on Low Power Mode, re-checks
   after wake, and respects `core.sshCommand`, `insteadOf` rewrites and linked worktrees.
 - **Self-updating.** Daily update check via [Sparkle](https://sparkle-project.org), EdDSA-signed releases.
@@ -73,12 +80,14 @@ news are shown.
   </tr>
 </table>
 
-- Light and dark appearance are both supported; the panel follows the system setting.
+- Light, dark or system appearance — *Settings › General › Theme*.
 - Repositories with new commits come first. Click a row to expand it; right-click for everything else
-  (*Check Now*, *Copy Path*, *Watch Branch…*, *Color*, *Mute Notifications*, *Remove*).
+  (*Check Now*, *Copy Path*, *Watch Branch…* — the remote's real branches, *Color*, *Notifications*, *Remove*).
 - Drop repository folders onto the panel to add them — or drop a folder that *contains* repositories and
   add them all at once.
-- Keyboard: <kbd>⌘R</kbd> refresh, <kbd>⌘O</kbd> add, <kbd>⌘F</kbd> filter, <kbd>⌘,</kbd> settings, <kbd>⌘Q</kbd> quit.
+- Keyboard: <kbd>⌃⌘R</kbd> opens the panel from anywhere (configurable), then <kbd>↑</kbd><kbd>↓</kbd> to move,
+  <kbd>→</kbd>/<kbd>←</kbd> to expand and collapse, <kbd>↩</kbd> to open the repository. Inside the panel:
+  <kbd>⌘R</kbd> refresh, <kbd>⌘O</kbd> add, <kbd>⌘F</kbd> filter, <kbd>⌘,</kbd> settings, <kbd>⌘Q</kbd> quit.
   Right-click the menu bar icon for a quick menu.
 
 ## Settings
@@ -89,14 +98,16 @@ news are shown.
     <th width="50%">Dark</th>
   </tr>
   <tr>
-    <td><img src="docs/screenshots/settings-light.png" alt="RepoBar settings in light appearance: check interval, launch at login, notifications, menu bar style with live preview"></td>
+    <td><img src="docs/screenshots/settings-light.png" alt="RepoBar settings in light appearance: the General tab with check interval, launch at login, theme and the panel shortcut"></td>
     <td><img src="docs/screenshots/settings-dark.png" alt="RepoBar settings in dark appearance"></td>
   </tr>
 </table>
 
-Check interval (1–60 min), launch at login, notifications, default "open in" app, menu bar style with a live
-preview, and under *Advanced*: the git binary to use, extra `PATH` entries for credential helpers, fetch
-timeout, concurrency, and whether to probe with `ls-remote` before fetching.
+Six tabs. *General*: check interval (1–60 min), launch at login, theme, and the shortcut that opens the panel.
+*Notifications*: new commits, unpushed-commit reminders, and silencing everything for a while. *Repositories*:
+the default "open in" application (plus any you add yourself) and the folders to watch for new clones.
+*Menu Bar*: style with a live preview. *Advanced*: the git binary to use, extra `PATH` entries for credential
+helpers, fetch timeout, concurrency, and whether to probe with `ls-remote` before fetching.
 
 ## How a check works
 

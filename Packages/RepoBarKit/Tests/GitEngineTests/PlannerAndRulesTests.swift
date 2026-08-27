@@ -112,6 +112,41 @@ struct AcknowledgementRulesTests {
     }
 }
 
+@Suite("Remote branch list")
+struct RemoteBranchListTests {
+    func ref(_ name: String, symref: String? = nil) -> RefRecord {
+        RefRecord(refname: name, objectName: "abc", symref: symref, upstream: nil, upstreamRemoteName: nil, upstreamRemoteRef: nil)
+    }
+
+    @Test func stripsThePrefixAndDropsHead() {
+        let refs = [
+            ref("refs/remotes/origin/HEAD", symref: "refs/remotes/origin/main"),
+            ref("refs/remotes/origin/main"),
+            ref("refs/remotes/origin/release/2026"),
+        ]
+        #expect(WatchedRefResolver.branchNames(from: refs, remote: "origin") == ["main", "release/2026"])
+    }
+
+    @Test func commonBranchesComeFirstThenAlphabetical() {
+        let names = ["zeta", "main", "alpha", "develop", "Beta"]
+        let refs = names.map { ref("refs/remotes/origin/\($0)") }
+        #expect(WatchedRefResolver.branchNames(from: refs, remote: "origin") == ["main", "develop", "alpha", "Beta", "zeta"])
+    }
+
+    @Test func ignoresOtherRemotesAndLocalBranches() {
+        let refs = [
+            ref("refs/heads/main"),
+            ref("refs/remotes/upstream/main"),
+            ref("refs/remotes/origin/feature"),
+        ]
+        #expect(WatchedRefResolver.branchNames(from: refs, remote: "origin") == ["feature"])
+    }
+
+    @Test func noBranchesIsEmptyNotAGuess() {
+        #expect(WatchedRefResolver.branchNames(from: [], remote: "origin").isEmpty)
+    }
+}
+
 @Suite("RepoPersistence")
 struct RepoPersistenceTests {
     func tempDir() -> URL {
@@ -123,7 +158,16 @@ struct RepoPersistenceTests {
         defer { try? FileManager.default.removeItem(at: dir) }
         let persistence = RepoPersistence(directory: dir)
         var record = RepoRecord(path: "/tmp/x", gitCommonDir: "/tmp/x/.git", displayName: "X", colorID: "teal", watch: .remoteBranch("release"), addedAt: Date(timeIntervalSince1970: 1_700_000_000.25))
+        // Every optional field is filled in: a field that is missing from CodingKeys
+        // encodes to nothing and would fail the equality check below.
         record.notificationsMuted = true
+        record.mutedUntil = Date(timeIntervalSince1970: 1_700_003_600)
+        record.lastOpenedAppBundleID = "com.apple.TextEdit"
+        record.bookmark = Data([1, 2, 3])
+        record.remoteOverride = "upstream"
+        record.webURLOverride = "https://example.com/x"
+        record.includeUntracked = false
+        record.sortOrder = 3
         var state = RepoState()
         state.lastSeenSHA["origin/main"] = "abc"
         state.lastSnapshot = RepoSnapshot(checkedAt: Date(timeIntervalSince1970: 1_700_000_000), unseenCount: 2, incoming: [
@@ -151,6 +195,20 @@ struct RepoPersistenceTests {
         #expect(!files.contains("repos.json"))
     }
 
+    @Test func mutingIsIndefiniteOrTimed() {
+        let now = Date(timeIntervalSince1970: 1_700_000_000)
+        var record = RepoRecord(path: "/tmp/x", gitCommonDir: "/tmp/x/.git")
+        #expect(!record.isMuted(at: now))
+
+        record.mutedUntil = now.addingTimeInterval(3600)
+        #expect(record.isMuted(at: now))
+        #expect(!record.isMuted(at: now.addingTimeInterval(7200)), "a timed mute lifts itself")
+
+        record.mutedUntil = nil
+        record.notificationsMuted = true
+        #expect(record.isMuted(at: now.addingTimeInterval(86_400 * 365)), "an indefinite mute never lifts")
+    }
+
     @Test func missingKeysDecodeWithDefaults() throws {
         let json = #"{"id":"6F9619FF-8B86-D011-B42D-00C04FC964FF","path":"/tmp/y"}"#
         let record = try JSONDecoder().decode(RepoRecord.self, from: Data(json.utf8))
@@ -159,6 +217,10 @@ struct RepoPersistenceTests {
         #expect(record.includeUntracked)
         let state = try JSONDecoder().decode(RepoState.self, from: Data("{}".utf8))
         #expect(state.consecutiveFailures == 0)
+        // A snapshot written before remoteBranches existed must still load.
+        let old = #"{"checkedAt":0,"unseenCount":0,"incoming":[],"workingTree":{"staged":0,"unstaged":0,"untracked":0,"conflicted":0},"isShallow":false,"historyRewritten":false,"networkMode":"fetched"}"#
+        let snapshot = try JSONDecoder().decode(RepoSnapshot.self, from: Data(old.utf8))
+        #expect(snapshot.remoteBranches.isEmpty)
     }
 }
 

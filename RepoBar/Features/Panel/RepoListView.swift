@@ -8,6 +8,7 @@ struct RepoListView: View {
     @Environment(\.staticLayout) private var staticLayout
     @State private var contentHeight: CGFloat = 0
     @FocusState private var searchFocused: Bool
+    @FocusState private var listFocused: Bool
 
     static let maxHeight: CGFloat = 460
     private var showsSearch: Bool { model.records.count > 8 }
@@ -40,6 +41,7 @@ struct RepoListView: View {
             if staticLayout {
                 rows(items).padding(.horizontal, 6).padding(.vertical, 6)
             } else {
+                ScrollViewReader { proxy in
                 ScrollView {
                     rows(items)
                         .padding(.horizontal, 6)
@@ -57,8 +59,49 @@ struct RepoListView: View {
                 // Applied outside the measured content on purpose: animating the content itself
                 // reports a new height on every frame, which feeds the measurement above.
                 .animation(reduceMotion ? nil : .spring(duration: 0.28, bounce: 0.1), value: items.map(\.id))
+                .onChange(of: ui.selected) { _, selected in
+                    guard let selected else { return }
+                    withAnimation(reduceMotion ? nil : .easeOut(duration: 0.15)) { proxy.scrollTo(selected, anchor: .center) }
+                }
+                }
             }
         }
+        .focusable()
+        .focusEffectDisabled()
+        .focused($listFocused)
+        .onAppear { listFocused = true }
+        .onChange(of: items.map(\.id)) { _, ids in ui.pruneSelection(to: ids) }
+        .onKeyPress(.upArrow) { ui.moveSelection(-1, in: items.map(\.id)); return .handled }
+        .onKeyPress(.downArrow) { ui.moveSelection(1, in: items.map(\.id)); return .handled }
+        .onKeyPress(.rightArrow) { expandSelected(true) }
+        .onKeyPress(.leftArrow) { expandSelected(false) }
+        .onKeyPress(.space) { toggleSelected() }
+        .onKeyPress(.return) { openSelected() }
+    }
+
+    // MARK: Keyboard
+
+    private func expandSelected(_ expand: Bool) -> KeyPress.Result {
+        guard let selected = ui.selected else { return .ignored }
+        if expand { ui.expanded.insert(selected) } else { ui.expanded.remove(selected) }
+        return .handled
+    }
+
+    private func toggleSelected() -> KeyPress.Result {
+        guard let selected = ui.selected else { return .ignored }
+        ui.toggle(selected)
+        if ui.expanded.contains(selected), model.settings.markSeenOnExpand,
+           let item = model.item(for: selected), item.unseen > 0 {
+            model.markSeen(selected)
+        }
+        return .handled
+    }
+
+    private func openSelected() -> KeyPress.Result {
+        guard let selected = ui.selected else { return .ignored }
+        model.closePanel?()
+        model.open(selected)
+        return .handled
     }
 
     @ViewBuilder

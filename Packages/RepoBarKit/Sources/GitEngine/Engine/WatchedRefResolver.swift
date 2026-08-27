@@ -12,9 +12,28 @@ public struct WatchedRefResolver: Sendable {
         public var error: RepoError?
         /// Default-branch cache entries to persist.
         public var cachedDefaultBranch: [String: CachedValue<String>]
+        /// Every branch that exists on the chosen remote, so the UI can offer the real
+        /// ones instead of a guessed list. Sorted, `HEAD` excluded.
+        public var remoteBranches: [String] = []
     }
 
     public static let heuristicBranches = ["main", "master", "develop", "trunk"]
+
+    /// Branch names under `refs/remotes/<remote>/`, with the common ones first so the
+    /// menu opens on what people usually want, then the rest alphabetically.
+    static func branchNames(from refs: [RefRecord], remote: String) -> [String] {
+        let prefix = "refs/remotes/\(remote)/"
+        let names = refs.compactMap { record -> String? in
+            guard record.refname.hasPrefix(prefix) else { return nil }
+            let name = String(record.refname.dropFirst(prefix.count))
+            // HEAD is a symref to one of the branches, not a branch of its own.
+            return name == "HEAD" || name.isEmpty ? nil : name
+        }
+        let common = heuristicBranches.filter { names.contains($0) }
+        let rest = names.filter { !heuristicBranches.contains($0) }
+            .sorted { $0.localizedCaseInsensitiveCompare($1) == .orderedAscending }
+        return common + rest
+    }
     public static let defaultBranchCacheAge: TimeInterval = 24 * 3600
 
     let git: GitClient
@@ -72,7 +91,9 @@ public struct WatchedRefResolver: Sendable {
         if watched == nil {
             branchCandidates = Self.heuristicBranches
         }
-        var refsToQuery = ["refs/remotes/\(remote)/HEAD"]
+        // The whole remote namespace in one query: it answers the HEAD symref, the
+        // heuristic candidates and the branch list the UI offers, all at once.
+        var refsToQuery = ["refs/remotes/\(remote)/"]
         if let watched { refsToQuery.append(watched.trackingRef) }
         refsToQuery += branchCandidates.map { "refs/remotes/\(remote)/\($0)" }
         let refsOut = try await git.run(["for-each-ref", "--format=\(ForEachRefParser.format)"] + refsToQuery, in: repo)
@@ -107,6 +128,8 @@ public struct WatchedRefResolver: Sendable {
                 }
             }
         }
+
+        resolution.remoteBranches = Self.branchNames(from: refs, remote: remote)
 
         guard let watched else {
             resolution.error = .noDefaultBranch

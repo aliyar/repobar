@@ -342,7 +342,7 @@
       <div class="row">
         <div class="row-text">
           <h3>The commits, before you fetch them</h3>
-          <p class="prose">Expand a repository and the incoming commits are already there: short SHA, subject, author, how long ago. Click one to open it on GitHub, GitLab, Bitbucket, Azure DevOps, Codeberg or sourcehut. Commits you haven’t seen are marked; the rest are context.</p>
+          <p class="prose">The panel opens on a shortcut of your choosing and answers to the keyboard: arrows to move, → to expand, ↩ to open the repository where you last worked on it. Expand a repository and the incoming commits are already there: short SHA, subject, author, how long ago. Click one to open it on GitHub, GitLab, Bitbucket, Azure DevOps, Codeberg or sourcehut. Commits you haven’t seen are marked; the rest are context.</p>
         </div>
         <figure class="row-media shot">
           <picture>
@@ -374,22 +374,22 @@
       <div class="row">
         <div class="row-text">
           <h3>Set it once and forget the app exists</h3>
-          <p class="prose">Check every 1 to 60 minutes, a light, dark or system appearance, launch at login, notifications, the default <b>Open in</b> application, and the menu bar style with a live preview of your own repositories. Advanced holds the parts you touch once: which <span class="mono">git</span> binary to use, extra <span class="mono">PATH</span> entries so your credential helper is found, the fetch timeout, how many checks run at a time, and whether to probe with <span class="mono">ls-remote</span> before fetching.</p>
+          <p class="prose">Settings is six small tabs rather than one long list: check interval, launch at login, theme and the panel shortcut in General; new-commit and unpushed-commit notifications under Notifications; the default <b>Open in</b> application and the folders to watch for new clones under Repositories; and the menu bar style with a live preview of your own repositories. Advanced holds the parts you touch once: which <span class="mono">git</span> binary to use, extra <span class="mono">PATH</span> entries so your credential helper is found, the fetch timeout, how many checks run at a time, and whether to probe with <span class="mono">ls-remote</span> before fetching.</p>
         </div>
         <figure class="row-media shot" id="settings-shot">
           <picture>
             <source media="(prefers-color-scheme: dark)" srcset="/assets/settings-dark.webp" type="image/webp">
             <source media="(prefers-color-scheme: dark)" srcset="/assets/settings-dark.png">
             <source srcset="/assets/settings-light.webp" type="image/webp">
-            <img src="/assets/settings-light.png" width="492" height="847" loading="lazy" decoding="async"
-                 alt="RepoBar Settings, General tab: check interval, appearance, launch at login, notifications, the Open In section with its default application, and the menu bar style with a live preview.">
+            <img src="/assets/settings-light.png" width="652" height="461" loading="lazy" decoding="async"
+                 alt="RepoBar Settings on the General tab, with tabs for Notifications, Repositories, Menu Bar, Advanced and About: check interval, launch at login, theme, and the panel shortcut.">
           </picture>
         </figure>
       </div>
 
       <p class="beat"><b>Open in</b> sends a repository straight to wherever you work on it — Finder, Terminal, iTerm, Ghostty, VS&nbsp;Code, Cursor, Zed, Xcode, Fork, Tower — offering the ones you actually have installed, and anything else you add yourself. Each repository remembers what you opened it with last, so the button is already right the next time.</p>
 
-      <p class="beat">When something lands, you get one notification with <b>Open</b> and <b>Pull</b> on it. Repositories you would rather not hear from can be muted individually, and RepoBar never notifies you twice about the same commits.</p>
+      <p class="beat">When something lands, you get one notification with <b>Open</b> and <b>Pull</b> on it, and RepoBar never notifies you twice about the same commits. It also reminds you about your own commits: a branch that has sat ahead of its remote for a day gets a nudge, because forgotten local work costs more than a missed pull. Silence any of it for an hour, for the evening, or one repository at a time — a timed silence lifts itself.</p>
     </div>
   </section>
 

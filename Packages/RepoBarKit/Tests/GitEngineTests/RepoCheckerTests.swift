@@ -157,6 +157,23 @@ struct RepoCheckerTests {
         #expect(after.snapshot.incoming.first?.subject == "on main")
     }
 
+    @Test func reportsTheRemotesRealBranches() async throws {
+        let fx = try await GitFixture()
+        let remote = try await fx.makeRemote()
+        let a = try await fx.clone(remote, as: "A")
+        let b = try await fx.clone(remote, as: "B")
+        for branch in ["release/2026", "develop", "aardvark"] {
+            try await fx.sh(["checkout", "-q", "-b", branch], in: b)
+            try await fx.sh(["push", "-q", "origin", branch], in: b)
+        }
+        try await fx.sh(["fetch", "-q", "origin"], in: a)
+        let record = try await fx.record(for: a)
+
+        let outcome = await fx.check(record)
+        #expect(outcome.snapshot.remoteBranches == ["main", "develop", "aardvark", "release/2026"],
+                "common branches first, then alphabetical")
+    }
+
     @Test func repoWithoutRemoteHeadUsesLsRemoteSymref() async throws {
         let fx = try await GitFixture()
         let remote = try await fx.makeRemote()

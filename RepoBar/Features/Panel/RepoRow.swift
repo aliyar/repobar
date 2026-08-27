@@ -9,6 +9,11 @@ struct RepoRow: View {
     @State private var hovering = false
 
     private var isExpanded: Bool { ui.expanded.contains(item.id) }
+    private var isSelected: Bool { ui.selected == item.id }
+    private var rowBackground: Color {
+        if isSelected { return Color.accentColor.opacity(0.14) }
+        return hovering && !isExpanded ? Color.primary.opacity(0.06) : .clear
+    }
     private var animation: Animation? { reduceMotion ? nil : .spring(duration: 0.28, bounce: 0.12) }
 
     var body: some View {
@@ -19,7 +24,8 @@ struct RepoRow: View {
                     .transition(reduceMotion ? .identity : .opacity.combined(with: .move(edge: .top)))
             }
         }
-        .background(hovering && !isExpanded ? Color.primary.opacity(0.06) : .clear, in: RoundedRectangle(cornerRadius: 8))
+        .background(rowBackground, in: RoundedRectangle(cornerRadius: 8))
+        .id(item.id)
         .onHover { hovering = $0 }
         .contextMenu { contextMenu }
         .accessibilityElement(children: .contain)
@@ -29,6 +35,7 @@ struct RepoRow: View {
 
     private var header: some View {
         Button {
+            ui.selected = item.id
             withAnimation(animation) { ui.toggle(item.id) }
             if ui.expanded.contains(item.id), model.settings.markSeenOnExpand, item.unseen > 0 {
                 model.markSeen(item.id)
@@ -44,6 +51,12 @@ struct RepoRow: View {
                         if item.isDirty {
                             Circle().fill(.orange).frame(width: 6, height: 6)
                                 .help("Uncommitted changes")
+                        }
+                        if item.record.isMuted() {
+                            Image(systemName: "bell.slash.fill")
+                                .font(.system(size: 8))
+                                .foregroundStyle(.tertiary)
+                                .help(muteHelp)
                         }
                     }
                     subtitle
@@ -103,6 +116,41 @@ struct RepoRow: View {
             if item.ahead > 0 {
                 CountCapsule(symbol: "arrow.up", count: item.ahead, tint: .orange)
                     .help("\(item.ahead) unpushed commits")
+            }
+        }
+    }
+
+    private var mutedUntilTitle: String {
+        if item.record.notificationsMuted { return "Muted indefinitely" }
+        guard let until = item.record.mutedUntil else { return "Muted" }
+        return "Muted until \(AppModel.untilLabel(until))"
+    }
+
+    private var muteHelp: String { "Notifications: \(mutedUntilTitle.lowercased())" }
+
+    static let maxBranchesInMenu = 15
+
+    /// The remote's real branches once the repository has been checked; the guessed
+    /// list only until then. A branch that is already being watched is always present,
+    /// even if it has since disappeared from the remote.
+    private var watchableBranches: [String] {
+        var branches = item.snapshot?.remoteBranches ?? []
+        if branches.isEmpty { branches = WatchedRefResolver.heuristicBranches }
+        if case .remoteBranch(let current) = item.record.watch, !branches.contains(current) {
+            branches.insert(current, at: 0)
+        }
+        return branches
+    }
+
+    @ViewBuilder
+    private func watchButton(_ branch: String) -> some View {
+        Button {
+            model.setWatch(item.id, .remoteBranch(branch))
+        } label: {
+            if case .remoteBranch(let current) = item.record.watch, current == branch {
+                Label(branch, systemImage: "checkmark")
+            } else {
+                Text(branch)
             }
         }
     }
@@ -270,21 +318,35 @@ struct RepoRow: View {
             } label: {
                 if case .upstreamOfCurrentBranch = item.record.watch { Label("Current branch (automatic)", systemImage: "checkmark") } else { Text("Current branch (automatic)") }
             }
-            ForEach(WatchedRefResolver.heuristicBranches, id: \.self) { branch in
-                Button {
-                    model.setWatch(item.id, .remoteBranch(branch))
-                } label: {
-                    if case .remoteBranch(let current) = item.record.watch, current == branch { Label(branch, systemImage: "checkmark") } else { Text(branch) }
+            Divider()
+            let branches = watchableBranches
+            ForEach(branches.prefix(Self.maxBranchesInMenu), id: \.self) { branch in
+                watchButton(branch)
+            }
+            if branches.count > Self.maxBranchesInMenu {
+                Menu("More…") {
+                    ForEach(branches.dropFirst(Self.maxBranchesInMenu), id: \.self) { branch in
+                        watchButton(branch)
+                    }
                 }
             }
-            if case .remoteBranch(let current) = item.record.watch, !WatchedRefResolver.heuristicBranches.contains(current) {
-                Label(current, systemImage: "checkmark")
-            }
         }
-        Toggle("Mute Notifications", isOn: Binding(
-            get: { item.record.notificationsMuted },
-            set: { model.setMuted(item.id, $0) }
-        ))
+        Menu("Notifications") {
+            if item.record.isMuted() {
+                Section(mutedUntilTitle) {
+                    Button("Unmute") { model.unmute(item.id) }
+                }
+                Divider()
+            }
+            ForEach(MuteWindow.allCases, id: \.self) { window in
+                Button("Mute \(window.title)") { model.mute(item.id, for: window.duration()) }
+            }
+            Divider()
+            Toggle("Mute Indefinitely", isOn: Binding(
+                get: { item.record.notificationsMuted },
+                set: { model.setMuted(item.id, $0) }
+            ))
+        }
         Divider()
         Button("Remove…", role: .destructive) {
             withAnimation(animation) { ui.confirmingRemoval = item.id }

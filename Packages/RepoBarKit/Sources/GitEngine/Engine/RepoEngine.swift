@@ -9,6 +9,10 @@ public struct EngineSettings: Sendable, Hashable {
     public var pruneOnFetch = false
     public var gitPathOverride: String?
     public var extraPaths: [String] = []
+    /// How long a branch may stay ahead of its remote before RepoBar reminds you; nil disables it.
+    public var unpushedReminderAfter: Duration?
+    /// Silences every repository until this date; nil means notifications are live.
+    public var notificationsSnoozedUntil: Date?
 
     public init() {}
 }
@@ -21,6 +25,8 @@ public enum EngineEvent: Sendable {
     case gitInstallation(GitInstallation?)
     /// The engine decided a user notification is warranted for this check.
     case notify(RepoRecord, RepoSnapshot)
+    /// Commits have been sitting unpushed long enough to be worth a reminder.
+    case notifyUnpushed(RepoRecord, RepoSnapshot)
     case paused(Bool)
     case online(Bool)
 }
@@ -275,12 +281,14 @@ public actor RepoEngine {
             for index in snapshot.incoming.indices { snapshot.incoming[index].isNew = false }
         }
 
+        let snoozed = settings.notificationsSnoozedUntil.map { now < $0 } ?? false
+        let muted = snoozed || record.isMuted(at: now)
         if snapshot.error == nil, let watched = snapshot.watched, let tip = snapshot.watchedTipSHA {
             let notify = AcknowledgementRules.shouldNotify(
                 unseen: snapshot.unseenCount,
                 tip: tip,
                 lastNotified: state.lastNotifiedSHA[watched.key],
-                muted: record.notificationsMuted,
+                muted: muted,
                 hadSuccessfulCheckBefore: previous.lastSuccessAt != nil
             )
             if notify {
@@ -288,6 +296,26 @@ public actor RepoEngine {
                 continuation.yield(.notify(record, snapshot))
             } else if snapshot.unseenCount == 0 {
                 state.lastNotifiedSHA[watched.key] = tip
+            }
+        }
+
+        if snapshot.error == nil {
+            if snapshot.ahead == 0 {
+                state.aheadSince = nil
+                state.lastUnpushedReminderAt = nil
+            } else if state.aheadSince == nil {
+                state.aheadSince = now
+            }
+            if AcknowledgementRules.shouldRemindAboutUnpushed(
+                ahead: snapshot.ahead,
+                aheadSince: state.aheadSince,
+                lastReminded: state.lastUnpushedReminderAt,
+                after: settings.unpushedReminderAfter,
+                muted: muted,
+                now: now
+            ) {
+                state.lastUnpushedReminderAt = now
+                continuation.yield(.notifyUnpushed(record, snapshot))
             }
         }
 

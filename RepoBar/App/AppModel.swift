@@ -29,6 +29,7 @@ final class AppModel {
     @ObservationIgnored var closePanel: (() -> Void)?
     /// Wired by AppDependencies: post a user notification.
     @ObservationIgnored var onNotify: ((RepoRecord, RepoSnapshot) -> Void)?
+    @ObservationIgnored var onNotifyUnpushed: ((RepoRecord, RepoSnapshot) -> Void)?
     /// Wired by AppDependencies: ask for notification permission (fires once, when repositories first appear).
     @ObservationIgnored var onRepositoriesAvailable: (() -> Void)?
     @ObservationIgnored private var announcedRepositories = false
@@ -85,7 +86,7 @@ final class AppModel {
     var statusLine: String {
         if gitMissing { return "git not found — open Settings" }
         if isPaused {
-            if let pausedUntil { return "Paused until \(pausedUntil.formatted(date: .omitted, time: .shortened))" }
+            if let pausedUntil { return "Paused until \(Self.untilLabel(pausedUntil))" }
             return "Paused"
         }
         if !isOnline { return "Offline — will retry" }
@@ -146,6 +147,9 @@ final class AppModel {
         case .notify(let record, let snapshot):
             guard settings.notificationsEnabled else { return }
             onNotify?(record, snapshot)
+        case .notifyUnpushed(let record, let snapshot):
+            guard settings.notificationsEnabled, settings.unpushedReminderEnabled else { return }
+            onNotifyUnpushed?(record, snapshot)
         case .paused(let paused):
             isPaused = paused
         case .online(let online):
@@ -179,6 +183,7 @@ final class AppModel {
     func panelDidOpen() {
         toast = nil
         refreshOpenApps()
+        scanWatchedFolders()
         guard settings.refreshOnPanelOpen else { return }
         Task { await engine.trigger(.panelOpened) }
     }
@@ -195,9 +200,64 @@ final class AppModel {
         Task { await engine.remove(id) }
     }
 
+    // MARK: - Notification snooze (all repositories)
+
+    var isSnoozed: Bool {
+        guard let until = settings.notificationsSnoozedUntil else { return false }
+        return Date() < until
+    }
+
+    var snoozedUntilLabel: String? {
+        guard isSnoozed, let until = settings.notificationsSnoozedUntil else { return nil }
+        return Self.untilLabel(until)
+    }
+
+    /// "2:30 PM" today, "tomorrow 9:00 AM" past midnight — a bare time is ambiguous
+    /// for anything that runs overnight, which is what people forget about.
+    nonisolated static func untilLabel(_ date: Date, calendar: Calendar = .current) -> String {
+        let time = date.formatted(date: .omitted, time: .shortened)
+        if calendar.isDateInToday(date) { return time }
+        if calendar.isDateInTomorrow(date) { return "tomorrow \(time)" }
+        return date.formatted(date: .abbreviated, time: .shortened)
+    }
+
+    func snoozeNotifications(for duration: Duration) {
+        settings.notificationsSnoozedUntil = Date().addingTimeInterval(Double(duration.components.seconds))
+        showToast("Notifications silenced until \(snoozedUntilLabel ?? "later")", kind: .info)
+    }
+
+    func resumeNotifications() {
+        settings.notificationsSnoozedUntil = nil
+        showToast("Notifications back on", kind: .info)
+    }
+
+    /// Indefinite mute. Clearing it also lifts any temporary silence.
     func setMuted(_ id: RepoID, _ muted: Bool) {
         guard var record = records.first(where: { $0.id == id }) else { return }
         record.notificationsMuted = muted
+        if !muted { record.mutedUntil = nil }
+        applyLocally(record)
+    }
+
+    /// Silences a repository for a while; it starts speaking again on its own.
+    func mute(_ id: RepoID, for duration: Duration) {
+        guard var record = records.first(where: { $0.id == id }) else { return }
+        record.mutedUntil = Date().addingTimeInterval(Double(duration.components.seconds))
+        record.notificationsMuted = false
+        applyLocally(record)
+        showToast("Muted \(record.name) until \(Self.untilLabel(record.mutedUntil!))", kind: .info)
+    }
+
+    func unmute(_ id: RepoID) {
+        guard var record = records.first(where: { $0.id == id }) else { return }
+        record.mutedUntil = nil
+        record.notificationsMuted = false
+        applyLocally(record)
+    }
+
+    /// Writes a record back to the in-memory list and the engine in one step.
+    private func applyLocally(_ record: RepoRecord) {
+        if let index = records.firstIndex(where: { $0.id == record.id }) { records[index] = record }
         Task { await engine.update(record) }
     }
 
@@ -242,6 +302,7 @@ final class AppModel {
         pauseTask?.cancel()
         pausedUntil = duration.map { Date().addingTimeInterval($0.seconds) }
         Task { await engine.setPaused(true) }
+        showToast(pausedUntil.map { "Checks paused until \(Self.untilLabel($0))" } ?? "Checks paused", kind: .info)
         if let duration {
             pauseTask = Task { [weak self] in
                 try? await Task.sleep(for: duration)
@@ -251,10 +312,17 @@ final class AppModel {
         }
     }
 
+    var pausedUntilLabel: String? {
+        guard isPaused, let pausedUntil else { return nil }
+        return Self.untilLabel(pausedUntil)
+    }
+
     func resume() {
+        let wasPaused = isPaused
         pauseTask?.cancel()
         pausedUntil = nil
         Task { await engine.setPaused(false) }
+        if wasPaused { showToast("Checks resumed", kind: .info) }
     }
 
     func setOnline(_ online: Bool) {
@@ -316,6 +384,48 @@ final class AppModel {
         } else if let lastError {
             showToast(lastError, kind: .failure)
         }
+    }
+
+    // MARK: - Watched folders
+
+    @ObservationIgnored private var lastFolderScan: Date?
+
+    /// Picks up clones that appeared in a watched folder. Throttled, because it runs
+    /// on every panel open and touches the disk.
+    func scanWatchedFolders(force: Bool = false) {
+        guard !settings.watchedFolders.isEmpty else { return }
+        let now = Date()
+        if !force, let last = lastFolderScan, now.timeIntervalSince(last) < 300 { return }
+        lastFolderScan = now
+        Task { await performWatchedFolderScan() }
+    }
+
+    private func performWatchedFolderScan() async {
+        var added: [String] = []
+        for folder in settings.watchedFolders {
+            let url = URL(fileURLWithPath: folder, isDirectory: true)
+            guard FileManager.default.fileExists(atPath: url.path) else { continue }
+            for candidate in await engine.discoverRepositories(in: url) {
+                guard !records.contains(where: { $0.path == candidate.path }) else { continue }
+                // `add` refuses duplicates and non-repositories on its own; a failure here
+                // just means this folder is not one we can watch.
+                if let record = try? await engine.add(path: candidate) { added.append(record.name) }
+            }
+        }
+        guard !added.isEmpty else { return }
+        Log.ui.notice("watched folders added \(added.count, privacy: .public) repositories")
+        showToast(added.count == 1 ? "Added \(added[0])" : "Added \(added.count) new repositories", kind: .success)
+    }
+
+    func addWatchedFolder(_ url: URL) {
+        let path = url.standardizedFileURL.path
+        guard !settings.watchedFolders.contains(path) else { return }
+        settings.watchedFolders.append(path)
+        scanWatchedFolders(force: true)
+    }
+
+    func removeWatchedFolder(_ path: String) {
+        settings.watchedFolders.removeAll { $0 == path }
     }
 
     func confirmDiscovery() {

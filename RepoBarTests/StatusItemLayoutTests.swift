@@ -129,3 +129,110 @@ struct ExternalAppCatalogTests {
         #expect(ExternalAppCatalog.app(withID: "dev.zed.Zed")?.kind == .editor)
     }
 }
+
+@Suite("Status item dimming")
+struct StatusItemDimmingTests {
+    func state() -> MenuBarState {
+        var state = MenuBarState(repos: [RepoDot(id: UUID(), color: .red, unseen: 1, hasError: false)])
+        state.style = .dots
+        return state
+    }
+
+    @Test func liveStateIsFullyDrawn() {
+        #expect(!StatusItemLayout.make(from: state()).isDimmed)
+    }
+
+    @Test func pausedDimsTheWholeItem() {
+        var state = state()
+        state.isPaused = true
+        let layout = StatusItemLayout.make(from: state)
+        #expect(layout.isDimmed, "dots must not read as live while checks are paused")
+        #expect(layout.glyph == .paused)
+    }
+
+    @Test func offlineDimsTooAndKeepsTheBranchGlyph() {
+        var state = state()
+        state.isOffline = true
+        let layout = StatusItemLayout.make(from: state)
+        #expect(layout.isDimmed)
+        #expect(layout.glyph == .branch)
+    }
+}
+
+@Suite("Preview fallback")
+struct PreviewFallbackTests {
+    func state(unseen: Int, style: MenuBarStyle) -> MenuBarState {
+        var state = MenuBarState(repos: [RepoDot(id: UUID(), color: .red, unseen: unseen, hasError: false)])
+        state.style = style
+        return state
+    }
+
+    @Test func countWithNothingNewShowsOnlyTheGlyph() {
+        let layout = StatusItemLayout.make(from: state(unseen: 0, style: .count))
+        #expect(layout.showsOnlyGlyph, "the Settings preview falls back to the sample on this")
+    }
+
+    @Test func countWithNewCommitsHasSomethingToShow() {
+        #expect(!StatusItemLayout.make(from: state(unseen: 3, style: .count)).showsOnlyGlyph)
+    }
+
+    @Test func iconOnlyIsBareUntilSomethingIsNew() {
+        #expect(StatusItemLayout.make(from: state(unseen: 0, style: .iconOnly)).showsOnlyGlyph)
+        #expect(!StatusItemLayout.make(from: state(unseen: 1, style: .iconOnly)).showsOnlyGlyph)
+    }
+
+    @Test func dotsAlwaysHaveSomethingToShow() {
+        #expect(!StatusItemLayout.make(from: state(unseen: 0, style: .dots)).showsOnlyGlyph,
+                "idle repositories still draw a dot")
+    }
+
+    @Test func theSampleIsNeverEmpty() {
+        for style in MenuBarStyle.allCases {
+            var sample = MenuBarState.sample
+            sample.style = style
+            #expect(!StatusItemLayout.make(from: sample).showsOnlyGlyph, "\(style) sample must render something")
+        }
+    }
+
+    @Test func thePreviewSampleFollowsTheChosenStyle() {
+        for style in MenuBarStyle.allCases {
+            var settings = MenuBarState()
+            settings.style = style
+            let layout = StatusItemLayout.make(from: .sample(styledLike: settings))
+            #expect(!layout.showsOnlyGlyph, "\(style) preview must show what the style does")
+            switch style {
+            case .dots: #expect(!layout.dots.isEmpty && layout.text == nil)
+            case .count: #expect(layout.text != nil && layout.dots.isEmpty)
+            case .iconOnly: #expect(layout.showsAttentionDot && layout.dots.isEmpty && layout.text == nil)
+            }
+        }
+    }
+
+    @Test func thePreviewSampleFollowsTheDotOptions() {
+        var settings = MenuBarState()
+        settings.style = .dots
+        settings.idleDotStyle = .faded
+        let faded = StatusItemLayout.make(from: .sample(styledLike: settings))
+        #expect(faded.dots.contains { $0.fill == .faded })
+
+        settings.idleDotStyle = .ring
+        let ringed = StatusItemLayout.make(from: .sample(styledLike: settings))
+        #expect(ringed.dots.contains { $0.fill == .ring })
+        #expect(!ringed.dots.contains { $0.fill == .faded })
+
+        settings.showIdleDots = false
+        let changedOnly = StatusItemLayout.make(from: .sample(styledLike: settings))
+        #expect(changedOnly.dots.count < ringed.dots.count, "hiding idle repositories must change the preview")
+    }
+
+    @Test func thePreviewSampleFollowsTheCountMode() {
+        var settings = MenuBarState()
+        settings.style = .count
+        settings.badgeMode = .repositories
+        let repositories = StatusItemLayout.make(from: .sample(styledLike: settings)).text
+
+        settings.badgeMode = .commits
+        let commits = StatusItemLayout.make(from: .sample(styledLike: settings)).text
+        #expect(repositories != commits, "the sample must make the two count modes distinguishable")
+    }
+}

@@ -40,4 +40,22 @@ public enum AcknowledgementRules {
     public static func shouldNotify(unseen: Int, tip: String, lastNotified: String?, muted: Bool, hadSuccessfulCheckBefore: Bool) -> Bool {
         unseen > 0 && tip != lastNotified && !muted && hadSuccessfulCheckBefore
     }
+
+    /// Whether to remind about commits that have been sitting unpushed. `after` is how
+    /// long a branch may stay ahead before the first reminder; the reminder then repeats
+    /// at most once a day so a long-lived branch does not nag.
+    public static func shouldRemindAboutUnpushed(
+        ahead: Int,
+        aheadSince: Date?,
+        lastReminded: Date?,
+        after: Duration?,
+        muted: Bool,
+        now: Date
+    ) -> Bool {
+        guard let after, ahead > 0, !muted, let aheadSince else { return false }
+        let seconds = Double(after.components.seconds)
+        guard now.timeIntervalSince(aheadSince) >= seconds else { return false }
+        guard let lastReminded else { return true }
+        return now.timeIntervalSince(lastReminded) >= 86_400
+    }
 }

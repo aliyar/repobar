@@ -36,6 +36,7 @@ struct StatusItemView: View {
         .padding(.horizontal, 2)
         .frame(height: Self.height)
         .fixedSize()
+        .opacity(layout.isDimmed ? 0.45 : 1)
     }
 
     private var glyph: some View {

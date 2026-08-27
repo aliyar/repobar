@@ -8,6 +8,7 @@ final class AppDependencies {
     private(set) static var shared: AppDependencies!
 
     let settings: AppSettings
+    let hotKey = GlobalHotKey()
     let engine: RepoEngine
     let model: AppModel
     let statusItem: StatusItemController
@@ -51,10 +52,15 @@ final class AppDependencies {
         statusItem.onTogglePause = { model.togglePause() }
         statusItem.onOpenSettings = { AppActivation.openSettings() }
         statusItem.onQuit = { NSApp.terminate(nil) }
-        statusItem.onPanelOpened = { model.panelDidOpen() }
+        statusItem.onPanelOpened = {
+            panelUI.selected = nil
+            model.panelDidOpen()
+        }
+        settings.onPanelShortcutChange = { [weak self] in self?.applyPanelShortcut() }
 
         model.closePanel = { statusItem.closePopover() }
         model.onNotify = { record, snapshot in notifications.post(record: record, snapshot: snapshot) }
+        model.onNotifyUnpushed = { record, snapshot in notifications.postUnpushed(record: record, snapshot: snapshot) }
         model.onRepositoriesAvailable = { [settings] in
             guard settings.notificationsEnabled else { return }
             Task {
@@ -79,9 +85,11 @@ final class AppDependencies {
 
     func start() {
         model.start()
+        model.scanWatchedFolders(force: true)
         triggers.start()
         observeMenuBarState()
         observeAppearance()
+        applyPanelShortcut()
         observeUpdateState()
         updates.start()
         Log.ui.notice("RepoBar started")
@@ -96,6 +104,15 @@ final class AppDependencies {
         }
         statusItem.updateAvailableVersion = version
         if version == nil { notifications.clearUpdateNotification() }
+    }
+
+    /// (Re-)registers the global shortcut that opens the panel.
+    private func applyPanelShortcut() {
+        let statusItem = statusItem
+        hotKey.onPress = { statusItem.togglePopover() }
+        if !hotKey.register(settings.panelShortcut), let shortcut = settings.panelShortcut {
+            model.showToast("\(shortcut.displayString) is already used by another app", kind: .failure)
+        }
     }
 
     /// Applies the user's appearance choice to the popover.
