@@ -39,6 +39,15 @@ final class AppSettings {
     var menuBarStyle: MenuBarStyle { didSet { set(menuBarStyle.rawValue, "menuBarStyle") } }
     var showIdleDots: Bool { didSet { set(showIdleDots, "showIdleDots") } }
     var idleDotStyle: IdleDotStyle { didSet { set(idleDotStyle.rawValue, "idleDotStyle") } }
+    var maxMenuBarDots: Int {
+        didSet {
+            // The field lets anything be typed; keep it inside what can be drawn.
+            let clamped = min(StatusItemLayout.maxDotsRange.upperBound,
+                              max(StatusItemLayout.maxDotsRange.lowerBound, maxMenuBarDots))
+            if clamped != maxMenuBarDots { maxMenuBarDots = clamped; return }
+            set(maxMenuBarDots, "maxMenuBarDots")
+        }
+    }
     var badgeMode: BadgeMode { didSet { set(badgeMode.rawValue, "badgeMode") } }
 
     /// Called after any engine-relevant setting changes.
@@ -81,6 +90,7 @@ final class AppSettings {
         menuBarStyle = MenuBarStyle(rawValue: defaults.string(forKey: "menuBarStyle") ?? "") ?? .dots
         showIdleDots = defaults.object(forKey: "showIdleDots") as? Bool ?? true
         idleDotStyle = IdleDotStyle(rawValue: defaults.string(forKey: "idleDotStyle") ?? "") ?? .ring
+        maxMenuBarDots = defaults.object(forKey: "maxMenuBarDots") as? Int ?? StatusItemLayout.defaultMaxDots
         badgeMode = BadgeMode(rawValue: defaults.string(forKey: "badgeMode") ?? "") ?? .repositories
     }
 

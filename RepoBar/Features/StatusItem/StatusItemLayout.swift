@@ -11,8 +11,10 @@ nonisolated struct StatusItemLayout: Equatable, Sendable {
         var fill: Fill
     }
 
-    static let maxFullDots = 8
-    static let maxChangedDots = 6
+    /// Default for `MenuBarState.maxDots`; the user picks their own in Settings.
+    static let defaultMaxDots = 8
+    /// Past this the dots stop being readable and macOS truncates the item anyway.
+    static let maxDotsRange = 1...30
 
     var glyph: Glyph = .branch
     var glyphOpacity: Double = 1
@@ -38,14 +40,15 @@ nonisolated struct StatusItemLayout: Equatable, Sendable {
 
         switch state.style {
         case .dots:
-            let showAll = state.showIdleDots && state.repos.count <= maxFullDots
-            if showAll {
-                layout.dots = state.repos.map { dot(for: $0, idleStyle: state.idleDotStyle) }
-            } else {
-                let changed = state.repos.filter { $0.hasChanges || $0.hasError }
-                layout.dots = changed.prefix(maxChangedDots).map { dot(for: $0, idleStyle: state.idleDotStyle) }
-                layout.overflow = max(0, changed.count - maxChangedDots)
-            }
+            // `repos` arrives in the panel's order — new commits first, then errors,
+            // then by name — so taking the first `limit` keeps what matters most and
+            // counts the rest. Asking for four dots always draws four, if there are four.
+            let limit = max(1, state.maxDots)
+            let candidates = state.showIdleDots
+                ? state.repos
+                : state.repos.filter { $0.hasChanges || $0.hasError }
+            layout.dots = candidates.prefix(limit).map { dot(for: $0, idleStyle: state.idleDotStyle) }
+            layout.overflow = max(0, candidates.count - limit)
         case .count:
             let count = state.badgeMode == .repositories ? state.unseenRepoCount : state.unseenCommitCount
             if count > 0 {

@@ -31,15 +31,16 @@ struct StatusItemLayoutTests {
         for index in 0..<12 { specs.append((RepoColor.allCases[index % 12], index.isMultiple(of: 2) ? 1 : 0, false)) }
         let state = MenuBarState(repos: dots(specs))
         let layout = StatusItemLayout.make(from: state)
-        #expect(layout.dots.count == 6)
-        #expect(layout.dots.allSatisfy { $0.fill == .filled })
-        #expect(layout.overflow == 0)
+        // The limit is filled from the top of the list and the rest is counted.
+        #expect(layout.dots.count == StatusItemLayout.defaultMaxDots)
+        #expect(layout.overflow == 12 - StatusItemLayout.defaultMaxDots)
 
-        var allChanged = state
-        allChanged.repos = dots(specs.map { ($0.0, 1, false) })
-        let overflow = StatusItemLayout.make(from: allChanged)
-        #expect(overflow.dots.count == 6)
-        #expect(overflow.overflow == 6)
+        var hidingIdle = state
+        hidingIdle.showIdleDots = false
+        let changedOnly = StatusItemLayout.make(from: hidingIdle)
+        #expect(changedOnly.dots.count == 6, "six of the twelve have news")
+        #expect(changedOnly.dots.allSatisfy { $0.fill == .filled })
+        #expect(changedOnly.overflow == 0)
     }
 
     @Test func countStyle() {
@@ -156,6 +157,56 @@ struct StatusItemDimmingTests {
         let layout = StatusItemLayout.make(from: state)
         #expect(layout.isDimmed)
         #expect(layout.glyph == .branch)
+    }
+}
+
+@Suite("Dot limit")
+struct DotLimitTests {
+    func state(_ count: Int, unseen: Set<Int> = [], max: Int) -> MenuBarState {
+        var state = MenuBarState(repos: (0..<count).map {
+            RepoDot(id: UUID(), color: .blue, unseen: unseen.contains($0) ? 1 : 0, hasError: false)
+        })
+        state.style = .dots
+        state.maxDots = max
+        return state
+    }
+
+    @Test func everythingFitsUnderTheLimit() {
+        let layout = StatusItemLayout.make(from: state(6, max: 8))
+        #expect(layout.dots.count == 6)
+        #expect(layout.overflow == 0)
+    }
+
+    @Test func overTheLimitTheBarStaysFull() {
+        let layout = StatusItemLayout.make(from: state(11, unseen: [2, 5], max: 8))
+        #expect(layout.dots.count == 8, "asking for eight dots must draw eight")
+        #expect(layout.overflow == 3)
+    }
+
+    @Test func aQuietMacStillShowsDots() {
+        // The bug this replaced: with nothing new, "show at most 4" drew nothing at all.
+        let layout = StatusItemLayout.make(from: state(6, max: 4))
+        #expect(layout.dots.count == 4)
+        #expect(layout.overflow == 2)
+    }
+
+    @Test func raisingTheLimitShowsThemAll() {
+        let layout = StatusItemLayout.make(from: state(11, unseen: [2, 5], max: 12))
+        #expect(layout.dots.count == 11, "the limit is what decides, not a fixed 8")
+        #expect(layout.overflow == 0)
+    }
+
+    @Test func hidingIdleRepositoriesCountsOnlyTheChangedOnes() {
+        var quiet = state(20, unseen: Set(0..<9), max: 4)
+        quiet.showIdleDots = false
+        let layout = StatusItemLayout.make(from: quiet)
+        #expect(layout.dots.count == 4)
+        #expect(layout.overflow == 5, "9 changed, 4 drawn")
+    }
+
+    @Test func aLimitOfZeroIsNotAllowedToBlankTheBar() {
+        let layout = StatusItemLayout.make(from: state(3, unseen: [0], max: 0))
+        #expect(layout.dots.count == 1)
     }
 }
 

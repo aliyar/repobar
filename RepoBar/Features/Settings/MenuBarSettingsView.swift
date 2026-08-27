@@ -3,6 +3,15 @@ import SwiftUI
 struct MenuBarSettingsView: View {
     @Environment(AppModel.self) private var model
 
+    /// Says what the limit means for this Mac, not in the abstract: with more
+    /// repositories than dots, only the ones worth looking at are drawn.
+    static func limitExplanation(max: Int, repositories: Int) -> String {
+        guard repositories > max else {
+            return "All \(repositories == 0 ? "your" : "\(repositories)") repositories fit, so every one of them gets a dot."
+        }
+        return "You have \(repositories) repositories: the \(max) that need you most get a dot, and the remaining \(repositories - max) are counted after them."
+    }
+
     var body: some View {
         @Bindable var settings = model.settings
         Form {
@@ -22,7 +31,18 @@ struct MenuBarSettingsView: View {
                             ForEach(IdleDotStyle.allCases, id: \.self) { Text($0.displayName).tag($0) }
                         }
                     }
-                    Text("Up to \(StatusItemLayout.maxFullDots) repositories are shown as dots; with more, only the ones with new commits appear.")
+                    HStack {
+                        Text("Show at most")
+                        Spacer(minLength: 8)
+                        TextField("", value: $settings.maxMenuBarDots, format: .number)
+                            .labelsHidden()
+                            .multilineTextAlignment(.trailing)
+                            .frame(width: 46)
+                        Stepper("", value: $settings.maxMenuBarDots, in: StatusItemLayout.maxDotsRange)
+                            .labelsHidden()
+                        Text("dots").foregroundStyle(.secondary)
+                    }
+                    Text(Self.limitExplanation(max: settings.maxMenuBarDots, repositories: model.records.count))
                         .font(.caption).foregroundStyle(.secondary)
                 }
             }

@@ -71,13 +71,14 @@ final class AppModel {
 
     var menuBar: MenuBarState {
         MenuBarState(
-            repos: items.map(\.dot),
+            repos: sortedItems().map(\.dot),
             isChecking: isRefreshing,
             isPaused: isPaused,
             isOffline: !isOnline,
             style: settings.menuBarStyle,
             showIdleDots: settings.showIdleDots,
             idleDotStyle: settings.idleDotStyle,
+            maxDots: settings.maxMenuBarDots,
             badgeMode: settings.badgeMode
         )
     }

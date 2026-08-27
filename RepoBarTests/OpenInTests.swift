@@ -156,3 +156,31 @@ struct SilenceLabelTests {
         #expect(label.count > 8, "includes a date, not just a time")
     }
 }
+
+@MainActor
+@Suite("Dot limit setting")
+struct DotLimitSettingTests {
+    func makeSettings() -> AppSettings {
+        AppSettings(defaults: UserDefaults(suiteName: "com.aliyar.RepoBar.dotlimit")!)
+    }
+
+    @Test func typedNumbersAreKeptInRange() {
+        let settings = makeSettings()
+        settings.maxMenuBarDots = 999
+        #expect(settings.maxMenuBarDots == StatusItemLayout.maxDotsRange.upperBound)
+
+        settings.maxMenuBarDots = 0
+        #expect(settings.maxMenuBarDots == StatusItemLayout.maxDotsRange.lowerBound)
+
+        settings.maxMenuBarDots = -4
+        #expect(settings.maxMenuBarDots == StatusItemLayout.maxDotsRange.lowerBound)
+    }
+
+    @Test func anythingInsideTheRangeIsKeptAsTyped() {
+        let settings = makeSettings()
+        for value in [1, 3, 7, 11, 30] {
+            settings.maxMenuBarDots = value
+            #expect(settings.maxMenuBarDots == value, "\(value) is a legal number of dots")
+        }
+    }
+}

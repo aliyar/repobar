@@ -53,6 +53,8 @@ nonisolated struct MenuBarState: Equatable, Sendable {
     var style: MenuBarStyle = .dots
     var showIdleDots = true
     var idleDotStyle: IdleDotStyle = .ring
+    /// How many dots the menu bar may show before it falls back to the changed ones only.
+    var maxDots = StatusItemLayout.defaultMaxDots
     var badgeMode: BadgeMode = .repositories
 
     var unseenRepoCount: Int { repos.filter(\.hasChanges).count }
@@ -88,6 +90,7 @@ nonisolated struct MenuBarState: Equatable, Sendable {
         state.badgeMode = settings.badgeMode
         state.showIdleDots = settings.showIdleDots
         state.idleDotStyle = settings.idleDotStyle
+        state.maxDots = settings.maxDots
         return state
     }
 }
