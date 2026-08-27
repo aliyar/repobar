@@ -103,7 +103,6 @@
       <div class="rb-head">
         <div class="rb-head-text">
           <p class="rb-status" data-status>2 of 5 repositories have new commits · 1 failed</p>
-          <p class="rb-updated" data-updated>Updated just now</p>
         </div>
         <div class="rb-head-actions">
           <button type="button" class="rb-icon" data-action="refresh" title="Check now" aria-label="Check all repositories now">
@@ -134,18 +133,18 @@
               <button type="button" class="rb-btn" data-action="pull">Pull</button>
               <button type="button" class="rb-btn" data-action="seen">Mark as seen</button>
               <span class="rb-open">
-                <button type="button" class="rb-btn rb-btn--menu" data-action="open" aria-expanded="false"><svg class="rb-open-ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#glyph-open"/></svg>Open in GitHub Desktop<span class="rb-open-div" aria-hidden="true"></span><svg class="rb-caret" viewBox="0 0 24 24" aria-hidden="true"><use href="#glyph-caret"/></svg></button>
+                <button type="button" class="rb-btn rb-btn--menu" data-action="open" aria-expanded="false"><svg class="rb-open-ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#glyph-open"/></svg>Open in Finder<span class="rb-open-div" aria-hidden="true"></span><svg class="rb-caret" viewBox="0 0 24 24" aria-hidden="true"><use href="#glyph-caret"/></svg></button>
                 <div class="rb-dropdown" hidden>
                   <p class="rb-menu-head">Git clients</p>
                   <ul class="rb-menu-list">
-                    <li><button type="button" class="is-current"><svg class="rb-menu-check" viewBox="0 0 24 24" aria-hidden="true"><use href="#glyph-check"/></svg><span>GitHub Desktop</span></button></li>
+                    <li><button type="button"><svg class="rb-menu-check" viewBox="0 0 24 24" aria-hidden="true"><use href="#glyph-check"/></svg><span>GitHub Desktop</span></button></li>
                     <li><button type="button"><svg class="rb-menu-check" viewBox="0 0 24 24" aria-hidden="true"><use href="#glyph-check"/></svg><span>Sourcetree</span></button></li>
                     <li><button type="button"><svg class="rb-menu-check" viewBox="0 0 24 24" aria-hidden="true"><use href="#glyph-check"/></svg><span>Fork</span></button></li>
                     <li><button type="button"><svg class="rb-menu-check" viewBox="0 0 24 24" aria-hidden="true"><use href="#glyph-check"/></svg><span>Tower</span></button></li>
                   </ul>
                   <p class="rb-menu-head">Finder</p>
                   <ul class="rb-menu-list">
-                    <li><button type="button"><svg class="rb-menu-check" viewBox="0 0 24 24" aria-hidden="true"><use href="#glyph-check"/></svg><span>Finder</span></button></li>
+                    <li><button type="button" class="is-current"><svg class="rb-menu-check" viewBox="0 0 24 24" aria-hidden="true"><use href="#glyph-check"/></svg><span>Finder</span></button></li>
                   </ul>
                   <p class="rb-menu-head">Terminals</p>
                   <ul class="rb-menu-list">
@@ -224,6 +223,10 @@
       <div class="rb-foot">
         <span class="rb-foot-l"><svg class="rb-plus" viewBox="0 0 24 24" aria-hidden="true"><use href="#glyph-plus"/></svg>Add Repository…</span>
         <span class="rb-foot-r">
+          <button type="button" class="rb-pause" data-action="silence" title="Silence notifications" aria-label="Silence notifications" aria-pressed="false">
+            <svg class="rb-bell-on" viewBox="0 0 24 24" aria-hidden="true"><use href="#glyph-bell"/></svg>
+            <svg class="rb-bell-off" viewBox="0 0 24 24" aria-hidden="true"><use href="#glyph-bell-off"/></svg>
+          </button>
           <button type="button" class="rb-pause" data-action="pause" title="Pause checks" aria-label="Pause checks" aria-pressed="false">
             <svg class="rb-pause-bars" viewBox="0 0 24 24" aria-hidden="true"><use href="#glyph-pause"/></svg>
             <svg class="rb-pause-play" viewBox="0 0 24 24" aria-hidden="true"><use href="#glyph-play"/></svg>
@@ -609,6 +612,20 @@
       <g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M12 5l0 14"/>
         <path d="M5 12l14 0"/>
+      </g>
+    </symbol>
+    <symbol id="glyph-bell" viewBox="0 0 24 24">
+      <g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 12a9 9 0 1 0 18 0a9 9 0 1 0 -18 0"/>
+        <path d="M9 14h6a2.5 2.5 0 0 1 -1 -2v-1.5a2 2 0 1 0 -4 0v1.5a2.5 2.5 0 0 1 -1 2"/>
+        <path d="M11.2 16a1 1 0 0 0 1.6 0"/>
+      </g>
+    </symbol>
+    <symbol id="glyph-bell-off" viewBox="0 0 24 24">
+      <g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 12a9 9 0 1 0 18 0a9 9 0 1 0 -18 0"/>
+        <path d="M9 14h6a2.5 2.5 0 0 1 -1 -2v-1.5a2 2 0 1 0 -4 0v1.5a2.5 2.5 0 0 1 -1 2"/>
+        <path d="M7 17l10 -10"/>
       </g>
     </symbol>
     <symbol id="glyph-pause" viewBox="0 0 24 24">

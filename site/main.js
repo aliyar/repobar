@@ -57,6 +57,8 @@
           : withNews + " of " + initial.length + " repositories have new commits");
         if (failed) parts.push(failed + " failed");
         if (pop.classList.contains("is-paused")) parts.push("checks paused");
+        if (pop.classList.contains("is-silenced")) parts.push("silenced");
+        if (parts.length === 1) parts.push("just now");
         statusLine.textContent = parts.join(" · ");
       }
       if (trigger) {
@@ -69,13 +71,10 @@
     var checking = null;
     function check() {
       if (checking || pop.classList.contains("is-paused")) return;
-      var updated = pop.querySelector("[data-updated]");
       panel.classList.add("is-checking");
       if (statusLine) statusLine.textContent = "Checking…";
-      if (updated) updated.textContent = "";
       checking = window.setTimeout(function () {
         panel.classList.remove("is-checking");
-        if (updated) updated.textContent = "Updated just now";
         checking = null;
         render();
         say("All repositories checked.");
@@ -178,6 +177,13 @@
         btn.setAttribute("aria-expanded", wasOpen ? "false" : "true");
       } else if (action === "refresh") {
         check();
+      } else if (action === "silence") {
+        var silenced = pop.classList.toggle("is-silenced");
+        btn.setAttribute("aria-pressed", silenced ? "true" : "false");
+        btn.setAttribute("aria-label", silenced ? "Turn notifications back on" : "Silence notifications");
+        btn.title = silenced ? "Silenced until tomorrow" : "Silence notifications";
+        render();
+        say(silenced ? "Notifications silenced." : "Notifications back on.");
       } else if (action === "pause") {
         var paused = pop.classList.toggle("is-paused");
         bar.classList.toggle("is-paused", paused);

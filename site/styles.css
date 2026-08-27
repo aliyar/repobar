@@ -204,9 +204,10 @@ img, svg { display: block; max-width: 100%; }
   position: relative; flex: none;
   width: calc(6px * var(--mb)); height: calc(6px * var(--mb));
   border-radius: 50%;
-  background: var(--dot); opacity: .32;
+  /* idle = a hollow ring, which is what the app draws by default */
+  background: none; box-shadow: inset 0 0 0 calc(1.2px * var(--mb)) var(--dot);
 }
-.mb-dot.is-new { opacity: 1; }
+.mb-dot.is-new { background: var(--dot); box-shadow: none; }
 .mb-dot.is-error {
   opacity: 1; background: none;
   box-shadow: inset 0 0 0 calc(1.2px * var(--mb)) var(--dot);
@@ -242,9 +243,10 @@ img, svg { display: block; max-width: 100%; }
   --mb: 1; --dot: currentColor;
   position: relative; display: inline-block; flex: none;
   width: calc(6px * var(--mb)); height: calc(6px * var(--mb));
-  border-radius: 50%; background: var(--dot); opacity: .32;
+  border-radius: 50%;
+  background: none; box-shadow: inset 0 0 0 calc(1.2px * var(--mb)) var(--dot);
 }
-.dot.is-new { opacity: 1; }
+.dot.is-new { background: var(--dot); box-shadow: none; }
 .dot.is-error { opacity: 1; background: none; box-shadow: inset 0 0 0 calc(1.2px * var(--mb)) var(--dot); }
 .dot--r1 { --dot: var(--r1); } .dot--r2 { --dot: var(--r2); }
 .dot--r3 { --dot: var(--r3); } .dot--r4 { --dot: var(--r4); }
@@ -417,19 +419,21 @@ html:not(.js) #rb-trigger { pointer-events: none; }
   color: var(--rb-text-2); cursor: pointer;
 }
 .rb-pause svg { width: 16px; height: 16px; }
-.rb-pause .rb-pause-play { display: none; }
+.rb-pause .rb-pause-play, .rb-pause .rb-bell-off { display: none; }
+.rb-pop.is-silenced .rb-pause .rb-bell-on { display: none; }
+.rb-pop.is-silenced .rb-pause .rb-bell-off { display: block; }
 .rb-pause:hover { color: var(--rb-text); }
 .rb-pause:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .rb-pop.is-paused .rb-pause .rb-pause-bars { display: none; }
 .rb-pop.is-paused .rb-pause .rb-pause-play { display: block; }
 .rb-pop.is-paused .rb-rows { opacity: .55; }
 .rb-quit { color: var(--rb-text-2); }
+.macbar.is-paused .menubar--real .mb-glyph,
 .macbar.is-paused .mb-dots { opacity: .45; }
 
 
 @keyframes rb-spin { to { transform: rotate(360deg); } }
 .rb-status { font-size: 12px; line-height: 1.35; font-weight: 500; letter-spacing: -.01em; }
-.rb-updated { font-size: 11px; line-height: 1.3; color: var(--rb-text-3); margin-top: 0; }
 
 .rb-rows { list-style: none; margin: 0; padding: 3px 0; }
 .rb-repo + .rb-repo { border-top: 1px solid transparent; }
