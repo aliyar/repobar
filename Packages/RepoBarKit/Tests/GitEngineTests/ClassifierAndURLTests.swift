@@ -110,9 +110,21 @@ struct RemoteURLTests {
         #expect(unknown.kind == .unknown)
         #expect(unknown.commitURL("abc").absoluteString == "https://work/o/r/commit/abc")
 
+        // A self-hosted forge serves its web UI on the same port as smart HTTP; dropping it
+        // sent every link to port 80. This assertion used to encode the bug.
         let http = try #require(WebRemote.from(remote: "http://gitea.local:3000/o/r.git"))
         #expect(http.kind == .gitea)
-        #expect(http.repoURL.absoluteString == "http://gitea.local/o/r")
+        #expect(http.repoURL.absoluteString == "http://gitea.local:3000/o/r")
+        #expect(http.commitURL("abc").absoluteString == "http://gitea.local:3000/o/r/commit/abc")
+
+        let httpsPort = try #require(WebRemote.from(remote: "https://gitlab.corp:8443/g/r.git"))
+        #expect(httpsPort.repoURL.absoluteString == "https://gitlab.corp:8443/g/r")
+
+        // An ssh port addresses sshd, never the web UI, so it is still dropped.
+        let sshPort = try #require(WebRemote.from(remote: "ssh://git@host:2222/o/r.git"))
+        #expect(sshPort.repoURL.absoluteString == "https://host/o/r")
+        let scp = try #require(WebRemote.from(remote: "git@host:o/r.git"))
+        #expect(scp.repoURL.absoluteString == "https://host/o/r")
     }
 
     @Test func overrideWins() throws {

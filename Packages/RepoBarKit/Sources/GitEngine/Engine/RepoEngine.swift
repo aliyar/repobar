@@ -23,6 +23,9 @@ public enum EngineEvent: Sendable {
     case snapshot(RepoID, RepoSnapshot)
     case removed(RepoID)
     case gitInstallation(GitInstallation?)
+    /// A snapshot changed because it was acknowledged, not because a check produced it —
+    /// the UI must update the rows without treating this as "the check finished".
+    case acknowledged(RepoID, RepoSnapshot)
     /// The engine decided a user notification is warranted for this check.
     case notify(RepoRecord, RepoSnapshot)
     /// Commits have been sitting unpushed long enough to be worth a reminder.
@@ -69,6 +72,8 @@ public actor RepoEngine {
     private var records: [RepoRecord] = []
     private var states: [RepoID: RepoState] = [:]
     private var inFlight: [RepoID: Task<Void, Never>] = [:]
+    /// A trigger that arrived while a check was running, to be honoured once it finishes.
+    private var queuedRecheck: [RepoID: CheckReason] = [:]
     private var pendingSeen: Set<RepoID> = []
     private var ticker: Task<Void, Never>?
     private var saveTask: Task<Void, Never>?
@@ -195,7 +200,15 @@ public actor RepoEngine {
     }
 
     private func startCheck(_ id: RepoID, reason: CheckReason) {
-        guard inFlight[id] == nil, let record = records.first(where: { $0.id == id }) else { return }
+        guard records.contains(where: { $0.id == id }) else { return }
+        if inFlight[id] != nil {
+            // The running check captured its record and its options before this trigger existed,
+            // so its result cannot answer it — a watch change would otherwise be silently lost
+            // until the next interval. Remember it and re-run once the check is done.
+            if queuedRecheck[id]?.isManual != true { queuedRecheck[id] = reason }
+            return
+        }
+        guard let record = records.first(where: { $0.id == id }) else { return }
         if reason.isManual {
             states[id, default: RepoState()].consecutiveFailures = 0
             states[id]?.backoffUntil = nil
@@ -210,6 +223,7 @@ public actor RepoEngine {
 
     private func clearInFlight(_ id: RepoID) {
         inFlight[id] = nil
+        if let reason = queuedRecheck.removeValue(forKey: id) { startCheck(id, reason: reason) }
     }
 
     private func performCheck(_ record: RepoRecord, reason: CheckReason) async {
@@ -373,6 +387,8 @@ public actor RepoEngine {
     public func remove(_ id: RepoID) {
         inFlight[id]?.cancel()
         inFlight[id] = nil
+        queuedRecheck[id] = nil
+        pendingSeen.remove(id)
         records.removeAll { $0.id == id }
         states[id] = nil
         continuation.yield(.removed(id))
@@ -414,7 +430,7 @@ public actor RepoEngine {
         for index in snapshot.incoming.indices { snapshot.incoming[index].isNew = false }
         state.lastSnapshot = snapshot
         states[id] = state
-        continuation.yield(.snapshot(id, snapshot))
+        continuation.yield(.acknowledged(id, snapshot))
         scheduleSave()
     }
 

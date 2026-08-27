@@ -105,6 +105,27 @@ struct ProcessRunnerTests {
         #expect(elapsed < .milliseconds(2900), "took \(elapsed)")
     }
 
+    /// The watchdog used to be cancelled only at function exit — after the drain — so a fetch
+    /// that finished at 89.9 s of a 90 s timeout was still reported as timed out, turning a
+    /// successful update into an error plus network backoff.
+    @Test func aProcessThatFinishesInTimeIsNotReportedAsTimedOut() async throws {
+        let result = try await runner.run(spec("echo done; (sleep 3 1>&2 &)", timeout: .seconds(1)))
+        #expect(result.exitCode == 0)
+        #expect(result.stdoutText == "done\n")
+        #expect(!result.timedOut, "it exited immediately; only the drain crossed the deadline")
+    }
+
+    /// Both pipes held by a grandchild: waitForEOF parked past the 2 s bound because it stored
+    /// its continuation without noticing the task was already cancelled.
+    @Test func grandchildHoldingBothPipesStillRespectsTheDrainBound() async throws {
+        let clock = ContinuousClock()
+        let start = clock.now
+        let result = try await runner.run(spec("(sleep 6 &); echo done"))
+        let elapsed = clock.now - start
+        #expect(result.exitCode == 0)
+        #expect(elapsed < .milliseconds(3500), "took \(elapsed)")
+    }
+
     @Test func workingDirectoryAndEnvironmentAreApplied() async throws {
         let dir = FileManager.default.temporaryDirectory
         var s = spec("pwd; printf %s \"$REPOBAR_TEST\"")

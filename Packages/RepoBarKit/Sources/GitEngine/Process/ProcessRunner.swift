@@ -153,6 +153,9 @@ public struct FoundationProcessRunner: ProcessRunning {
             let deadline = DispatchTime.now() + .milliseconds(Int(max(0, grace.components.seconds * 1000 + grace.components.attoseconds / 1_000_000_000_000_000)))
             DispatchQueue.global().asyncAfter(deadline: deadline) { control.kill() }
         }
+        // Cancelled here, not by the defer at function exit: the process has finished, so the
+        // drain below must not be able to mark a successful run as timed out.
+        watchdog.cancel()
 
         await withBoundedWait(.seconds(2)) {
             await stdout.waitForEOF()
@@ -316,8 +319,11 @@ final class PipeCollector: Sendable {
     func waitForEOF() async {
         await withTaskCancellationHandler {
             await withCheckedContinuation { continuation in
+                // Checked inside: on an already-cancelled task the onCancel handler below has
+                // run before we stored the continuation, so parking here would wait for a real
+                // EOF that a grandchild holding the pipe may never deliver.
                 let done = state.withLock { state -> Bool in
-                    if state.eof { return true }
+                    if state.eof || Task.isCancelled { return true }
                     state.waiter = continuation
                     return false
                 }

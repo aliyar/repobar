@@ -199,6 +199,62 @@ struct RepoEngineTests {
         #expect(state.lastNotifiedSHA["origin/main"] == tip)
     }
 
+    /// A trigger that arrives mid-check used to be dropped: the running check had already
+    /// captured the old record, so changing the watched branch during a refresh left the
+    /// repository showing the wrong branch until the next interval.
+    @Test func aTriggerDuringACheckIsHonouredAfterwards() async throws {
+        let fx = try await GitFixture()
+        let remote = try await fx.makeRemote()
+        let a = try await fx.clone(remote, as: "A")
+        let seed = try await fx.clone(remote, as: "seed")
+        _ = try await fx.sh(["switch", "-q", "-c", "release"], in: seed)
+        try await fx.commit(in: seed, file: "r.txt", content: "r", message: "on release")
+        try await fx.push(in: seed, "release")
+
+        let (engine, _) = makeEngine(fx)
+        await engine.start()
+        let record = try await engine.add(path: a)
+        await engine.waitForIdle()
+        #expect(await engine.state(for: record.id)?.lastSnapshot?.watched?.branch == "main")
+
+        fx.runner.hold("fetch", for: .milliseconds(600))
+        let check = Task { await engine.checkNow(record.id) }
+        try await Task.sleep(for: .milliseconds(200))
+        var watched = record
+        watched.watch = .remoteBranch("release")
+        await engine.update(watched)      // dropped before: the check was already running
+        await check.value
+        fx.runner.hold("", for: .zero)
+        await engine.waitForIdle()
+
+        #expect(await engine.state(for: record.id)?.lastSnapshot?.watched?.branch == "release",
+                "the queued trigger runs once the in-flight check finishes")
+    }
+
+    /// markSeen used to emit .snapshot, which the app reads as "the check finished": pressing
+    /// Mark as seen during a refresh stopped the spinners and rewound "Updated …".
+    @Test func markSeenIsAnAcknowledgementNotACheckResult() async throws {
+        let fx = try await GitFixture()
+        let remote = try await fx.makeRemote()
+        let a = try await fx.clone(remote, as: "A")
+        let b = try await fx.clone(remote, as: "B")
+        let (engine, _) = makeEngine(fx)
+        let collector = EventCollector(engine.events)
+        await engine.start()
+        let record = try await engine.add(path: a)
+        await engine.waitForIdle()
+        try await fx.commit(in: b, file: "n.txt", content: "n", message: "news")
+        try await fx.push(in: b)
+        await engine.checkNow(record.id)
+
+        await engine.markSeen(record.id)
+        #expect(await collector.waitForAcknowledgement(of: record.id),
+                "the acknowledgement arrives as its own event, not as a check result")
+        let seen = await collector.waitForSnapshot(for: record.id) { $0.unseenCount == 0 }
+        #expect(seen != nil, "and the UI still receives the acknowledged snapshot")
+        await collector.stop()
+    }
+
     @Test func addCheckNotifyMarkSeenRemove() async throws {
         let fx = try await GitFixture()
         let remote = try await fx.makeRemote()
@@ -349,6 +405,7 @@ struct RepoEngineTests {
 actor EventCollector {
     private var snapshots: [RepoID: RepoSnapshot] = [:]
     private(set) var notifications: [(RepoRecord, RepoSnapshot)] = []
+    private(set) var acknowledged: [RepoID] = []
     private var task: Task<Void, Never>?
 
     init(_ stream: AsyncStream<EngineEvent>) {
@@ -367,6 +424,9 @@ actor EventCollector {
     private func handle(_ event: EngineEvent) {
         switch event {
         case .snapshot(let id, let snapshot): snapshots[id] = snapshot
+        case .acknowledged(let id, let snapshot):
+            snapshots[id] = snapshot
+            acknowledged.append(id)
         case .notify(let record, let snapshot): notifications.append((record, snapshot))
         default: break
         }
@@ -379,6 +439,14 @@ actor EventCollector {
             try? await Task.sleep(for: .milliseconds(25))
         }
         return snapshots[id]
+    }
+
+    func waitForAcknowledgement(of id: RepoID) async -> Bool {
+        for _ in 0..<40 {
+            if acknowledged.contains(id) { return true }
+            try? await Task.sleep(for: .milliseconds(25))
+        }
+        return false
     }
 
     func waitForSnapshot(for id: RepoID, where predicate: (RepoSnapshot) -> Bool) async -> RepoSnapshot? {

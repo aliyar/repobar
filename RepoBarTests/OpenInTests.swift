@@ -1,5 +1,6 @@
 import Foundation
 import Testing
+import GitEngine
 @testable import RepoBar
 
 @MainActor
@@ -182,5 +183,31 @@ struct DotLimitSettingTests {
             settings.maxMenuBarDots = value
             #expect(settings.maxMenuBarDots == value, "\(value) is a legal number of dots")
         }
+    }
+}
+
+@MainActor
+@Suite("Acknowledgement events")
+struct AcknowledgementEventTests {
+    /// An acknowledgement carries the previous check's timestamp, so treating it as a check
+    /// result stopped the spinner mid-refresh and rewound the header's "Updated …".
+    @Test func acknowledgingDuringACheckKeepsTheSpinnerAndTheTimestamp() {
+        let model = AppModel.preview(sample: false)
+        let id = UUID()
+        let now = Date()
+        let older = now.addingTimeInterval(-600)
+
+        model.handleForTesting(.checkStarted(id))
+        #expect(model.isRefreshing)
+
+        model.handleForTesting(.snapshot(id, RepoSnapshot(checkedAt: now)))
+        #expect(!model.isRefreshing)
+        #expect(model.lastRefresh == now)
+
+        model.handleForTesting(.checkStarted(id))
+        model.handleForTesting(.acknowledged(id, RepoSnapshot(checkedAt: older, unseenCount: 0)))
+        #expect(model.isRefreshing, "the check is still running")
+        #expect(model.lastRefresh == now, "the timestamp must not run backwards")
+        #expect(model.snapshots[id]?.checkedAt == older, "the row itself is updated")
     }
 }

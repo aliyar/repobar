@@ -187,9 +187,12 @@ public struct RepoSnapshot: Codable, Sendable, Hashable {
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         checkedAt = try c.decode(Date.self, forKey: .checkedAt)
-        head = try c.decodeIfPresent(HeadState.self, forKey: .head)
-        upstream = try c.decodeIfPresent(WatchedRef.self, forKey: .upstream)
-        watched = try c.decodeIfPresent(WatchedRef.self, forKey: .watched)
+        // `try?` on every field with a synthesized enum inside it: an unknown case would
+        // otherwise throw, and RepoPersistence answers a throw by moving the entire file
+        // aside — losing every repository's seen/notified ledger over one stale field.
+        head = (try? c.decodeIfPresent(HeadState.self, forKey: .head)) ?? nil
+        upstream = (try? c.decodeIfPresent(WatchedRef.self, forKey: .upstream)) ?? nil
+        watched = (try? c.decodeIfPresent(WatchedRef.self, forKey: .watched)) ?? nil
         watchedTipSHA = try c.decodeIfPresent(String.self, forKey: .watchedTipSHA)
         comparison = try c.decodeIfPresent(BranchComparison.self, forKey: .comparison)
         unseenCount = try c.decodeIfPresent(Int.self, forKey: .unseenCount) ?? 0
@@ -197,11 +200,11 @@ public struct RepoSnapshot: Codable, Sendable, Hashable {
         workingTree = try c.decodeIfPresent(WorkingTreeState.self, forKey: .workingTree) ?? WorkingTreeState()
         isShallow = try c.decodeIfPresent(Bool.self, forKey: .isShallow) ?? false
         historyRewritten = try c.decodeIfPresent(Bool.self, forKey: .historyRewritten) ?? false
-        networkMode = try c.decodeIfPresent(NetworkMode.self, forKey: .networkMode) ?? .notAttempted
+        networkMode = (try? c.decodeIfPresent(NetworkMode.self, forKey: .networkMode)) ?? .notAttempted
         remoteURL = try c.decodeIfPresent(String.self, forKey: .remoteURL)
         web = try c.decodeIfPresent(WebRemote.self, forKey: .web)
         remoteBranches = try c.decodeIfPresent([String].self, forKey: .remoteBranches) ?? []
-        error = try c.decodeIfPresent(RepoError.self, forKey: .error)
+        error = (try? c.decodeIfPresent(RepoError.self, forKey: .error)) ?? nil
     }
 }
 
@@ -288,7 +291,7 @@ public struct RepoRecord: Codable, Sendable, Hashable, Identifiable {
         gitCommonDir = try c.decodeIfPresent(String.self, forKey: .gitCommonDir) ?? (path as NSString).appendingPathComponent(".git")
         displayName = try c.decodeIfPresent(String.self, forKey: .displayName)
         colorID = try c.decodeIfPresent(String.self, forKey: .colorID)
-        watch = try c.decodeIfPresent(WatchMode.self, forKey: .watch) ?? .upstreamOfCurrentBranch
+        watch = (try? c.decodeIfPresent(WatchMode.self, forKey: .watch)) ?? .upstreamOfCurrentBranch
         remoteOverride = try c.decodeIfPresent(String.self, forKey: .remoteOverride)
         webURLOverride = try c.decodeIfPresent(String.self, forKey: .webURLOverride)
         notificationsMuted = try c.decodeIfPresent(Bool.self, forKey: .notificationsMuted) ?? false
@@ -332,7 +335,9 @@ public struct RepoState: Codable, Sendable, Hashable {
     public var lastSeenSHA: [String: String] = [:]
     public var lastNotifiedSHA: [String: String] = [:]
     public var cachedDefaultBranch: [String: CachedValue<String>] = [:]
-    public var cachedRemoteURL: CachedValue<String>?
+    /// Keyed by remote name: a repository with `origin` and `upstream` must not serve one's
+    /// web URL for the other after a remoteOverride change.
+    public var cachedRemoteURL: [String: CachedValue<String>] = [:]
     public var lastSnapshot: RepoSnapshot?
     public var lastAttemptAt: Date?
     public var lastSuccessAt: Date?
@@ -356,12 +361,12 @@ public struct RepoState: Codable, Sendable, Hashable {
         lastSeenSHA = try c.decodeIfPresent([String: String].self, forKey: .lastSeenSHA) ?? [:]
         lastNotifiedSHA = try c.decodeIfPresent([String: String].self, forKey: .lastNotifiedSHA) ?? [:]
         cachedDefaultBranch = try c.decodeIfPresent([String: CachedValue<String>].self, forKey: .cachedDefaultBranch) ?? [:]
-        cachedRemoteURL = try c.decodeIfPresent(CachedValue<String>.self, forKey: .cachedRemoteURL)
-        lastSnapshot = try c.decodeIfPresent(RepoSnapshot.self, forKey: .lastSnapshot)
+        cachedRemoteURL = (try? c.decodeIfPresent([String: CachedValue<String>].self, forKey: .cachedRemoteURL)) ?? [:]
+        lastSnapshot = (try? c.decodeIfPresent(RepoSnapshot.self, forKey: .lastSnapshot)) ?? nil
         lastAttemptAt = try c.decodeIfPresent(Date.self, forKey: .lastAttemptAt)
         lastSuccessAt = try c.decodeIfPresent(Date.self, forKey: .lastSuccessAt)
         consecutiveFailures = try c.decodeIfPresent(Int.self, forKey: .consecutiveFailures) ?? 0
-        lastFailureKind = try c.decodeIfPresent(FailureKind.self, forKey: .lastFailureKind)
+        lastFailureKind = (try? c.decodeIfPresent(FailureKind.self, forKey: .lastFailureKind)) ?? nil
         backoffUntil = try c.decodeIfPresent(Date.self, forKey: .backoffUntil)
         aheadSince = try c.decodeIfPresent(Date.self, forKey: .aheadSince)
         lastUnpushedReminderAt = try c.decodeIfPresent(Date.self, forKey: .lastUnpushedReminderAt)

@@ -80,7 +80,9 @@ public struct RemoteURL: Sendable, Hashable {
             }
         default: break
         }
-        result.port = nil
+        // An ssh port never addresses the web UI, so it goes; an http(s) port usually is the
+        // web UI (self-hosted Gitea/GitLab on :3000, :8443) and must be kept.
+        if url.scheme != .http && url.scheme != .https { result.port = nil }
         return result
     }
 }
@@ -106,7 +108,8 @@ public struct WebRemote: Codable, Sendable, Hashable {
         }
         guard let parsed = RemoteURL.parse(remote), parsed.scheme != .file, parsed.scheme != .local, !parsed.path.isEmpty else { return nil }
         let webScheme = parsed.scheme == .http ? "http" : "https"
-        guard let url = URL(string: "\(webScheme)://\(parsed.host)/\(parsed.path)") else { return nil }
+        let authority = parsed.port.map { "\(parsed.host):\($0)" } ?? parsed.host
+        guard let url = URL(string: "\(webScheme)://\(authority)/\(parsed.path)") else { return nil }
         return WebRemote(kind: kind(forHost: parsed.host), repoURL: url)
     }
 

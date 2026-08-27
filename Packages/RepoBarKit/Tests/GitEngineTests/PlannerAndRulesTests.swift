@@ -277,6 +277,28 @@ struct RepoPersistenceTests {
         #expect(!files.contains("repos.json"))
     }
 
+    /// One unknown enum case must not cost the whole file: RepoPersistence answers a decoding
+    /// throw by moving state.json aside, which would wipe every repository's ledger.
+    @Test func anUnknownEnumCaseCostsOnlyItsOwnField() throws {
+        let json = """
+        {"checkedAt":0,"unseenCount":2,"incoming":[],"networkMode":"teleported",
+         "watchedTipSHA":"abc","error":{"somethingFromTheFuture":{}},
+         "head":{"whatIsThis":{"name":"main","sha":"abc"}}}
+        """
+        let snapshot = try JSONDecoder().decode(RepoSnapshot.self, from: Data(json.utf8))
+        #expect(snapshot.watchedTipSHA == "abc", "the fields we understand survive")
+        #expect(snapshot.unseenCount == 2)
+        #expect(snapshot.error == nil, "an unrecognised error falls back, it does not throw")
+        #expect(snapshot.head == nil)
+        #expect(snapshot.networkMode == .notAttempted)
+
+        // The same for a record: an unknown watch mode must not empty the repository list.
+        let recordJSON = #"{"id":"6F9619FF-8B86-D011-B42D-00C04FC964FF","path":"/tmp/y","watch":{"orbitingMars":{}}}"#
+        let record = try JSONDecoder().decode(RepoRecord.self, from: Data(recordJSON.utf8))
+        #expect(record.path == "/tmp/y")
+        #expect(record.watch == .upstreamOfCurrentBranch)
+    }
+
     @Test func mutingIsIndefiniteOrTimed() {
         let now = Date(timeIntervalSince1970: 1_700_000_000)
         var record = RepoRecord(path: "/tmp/x", gitCommonDir: "/tmp/x/.git")

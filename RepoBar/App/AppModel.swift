@@ -124,6 +124,9 @@ final class AppModel {
         }
     }
 
+    /// Feeds one engine event through the same path the live stream uses. Tests only.
+    func handleForTesting(_ event: EngineEvent) { handle(event) }
+
     private func handle(_ event: EngineEvent) {
         switch event {
         case .records(let records):
@@ -138,7 +141,11 @@ final class AppModel {
         case .snapshot(let id, let snapshot):
             snapshots[id] = snapshot
             checking.remove(id)
-            lastRefresh = snapshot.checkedAt
+            // A snapshot can be older than one already shown (an acknowledgement carries the
+            // previous check's time), and "Updated 2 min ago" must never run backwards.
+            lastRefresh = max(lastRefresh ?? .distantPast, snapshot.checkedAt)
+        case .acknowledged(let id, let snapshot):
+            snapshots[id] = snapshot
         case .removed(let id):
             snapshots[id] = nil
             checking.remove(id)

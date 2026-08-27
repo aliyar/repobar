@@ -126,14 +126,14 @@ public struct RepoChecker: Sendable {
             }
 
             // 4. Web URL (cached daily)
-            if let cached = state.cachedRemoteURL, cached.isFresh(maxAge: 24 * 3600, now: options.now) {
+            if let cached = state.cachedRemoteURL[remote], cached.isFresh(maxAge: 24 * 3600, now: options.now) {
                 snapshot.remoteURL = cached.value
             } else {
                 let urlOut = try await git.output(["ls-remote", "--get-url", "--", remote], in: repo)
                 if urlOut.exitCode == 0 {
                     let url = urlOut.stdoutText.trimmingCharacters(in: .whitespacesAndNewlines)
                     snapshot.remoteURL = url
-                    state.cachedRemoteURL = CachedValue(value: url, resolvedAt: options.now)
+                    state.cachedRemoteURL[remote] = CachedValue(value: url, resolvedAt: options.now)
                 }
             }
             if let remoteURL = snapshot.remoteURL {
@@ -170,6 +170,17 @@ public struct RepoChecker: Sendable {
                     snapshot.networkMode = .fetched
                     let refOut = try await git.run(["for-each-ref", "--format=\(ForEachRefParser.format)", watched.trackingRef], in: repo)
                     tipSHA = ForEachRefParser.parse(refOut.stdoutText).first?.objectName
+
+                    if tipSHA == nil {
+                        // A --single-branch or --depth clone has a refspec covering only the branch
+                        // it was cloned at, so fetching the remote exits 0 without ever creating the
+                        // watched branch's tracking ref. Ask for it explicitly; on an ordinary clone
+                        // this never runs, because the first fetch already made the ref.
+                        let refspec = "+refs/heads/\(watched.branch):\(watched.trackingRef)"
+                        _ = try await runRetryingLocks(args + [refspec], in: repo, timeout: options.fetchTimeout, network: true)
+                        let retry = try await git.run(["for-each-ref", "--format=\(ForEachRefParser.format)", watched.trackingRef], in: repo)
+                        tipSHA = ForEachRefParser.parse(retry.stdoutText).first?.objectName
+                    }
                 }
             }
             snapshot.watchedTipSHA = tipSHA

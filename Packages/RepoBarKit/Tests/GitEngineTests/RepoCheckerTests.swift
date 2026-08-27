@@ -174,6 +174,26 @@ struct RepoCheckerTests {
                 "common branches first, then alphabetical")
     }
 
+    /// A shallow/single-branch clone only fetches the branch it was cloned at, so watching any
+    /// other branch left the tracking ref missing: the check reported success with no tip and the
+    /// panel said "Waiting for the first fetch…" forever, re-fetching every interval.
+    @Test func singleBranchCloneStillFetchesTheWatchedBranch() async throws {
+        let fx = try await GitFixture()
+        let remote = try await fx.makeRemote()
+        let seed = try await fx.clone(remote, as: "seed")
+        _ = try await fx.sh(["switch", "-q", "-c", "release"], in: seed)
+        try await fx.commit(in: seed, file: "r.txt", content: "r", message: "on release")
+        try await fx.push(in: seed, "release")
+
+        let shallow = try await fx.clone(remote, as: "shallow", extra: ["--depth", "1", "-b", "main"])
+        let record = try await fx.record(for: shallow, watch: .remoteBranch("release"))
+        let outcome = await fx.check(record)
+
+        #expect(outcome.snapshot.error == nil)
+        #expect(outcome.snapshot.watched?.branch == "release")
+        #expect(outcome.snapshot.watchedTipSHA != nil, "the watched branch must actually be fetched")
+    }
+
     @Test func repoWithoutRemoteHeadUsesLsRemoteSymref() async throws {
         let fx = try await GitFixture()
         let remote = try await fx.makeRemote()
