@@ -109,9 +109,14 @@
             <svg class="rb-ico-arrow" viewBox="0 0 24 24" aria-hidden="true"><use href="#glyph-refresh"/></svg>
             <svg class="rb-ico-spin" viewBox="0 0 14 14" aria-hidden="true"><use href="#glyph-spinner"/></svg>
           </button>
-          <a class="rb-icon" href="#settings-shot" title="Settings" aria-label="See the Settings window">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#glyph-settings"/></svg>
-          </a>
+          <button type="button" class="rb-icon" data-action="pause" title="Pause checks" aria-label="Pause checks" aria-pressed="false">
+            <svg class="rb-pause-bars" viewBox="0 0 24 24" aria-hidden="true"><use href="#glyph-pause"/></svg>
+            <svg class="rb-pause-play" viewBox="0 0 24 24" aria-hidden="true"><use href="#glyph-play"/></svg>
+          </button>
+          <button type="button" class="rb-icon" data-action="silence" title="Silence notifications" aria-label="Silence notifications" aria-pressed="false">
+            <svg class="rb-bell-on" viewBox="0 0 24 24" aria-hidden="true"><use href="#glyph-bell"/></svg>
+            <svg class="rb-bell-off" viewBox="0 0 24 24" aria-hidden="true"><use href="#glyph-bell-off"/></svg>
+          </button>
         </div>
       </div>
       <ul class="rb-rows" data-rows>
@@ -223,14 +228,7 @@
       <div class="rb-foot">
         <span class="rb-foot-l"><svg class="rb-plus" viewBox="0 0 24 24" aria-hidden="true"><use href="#glyph-plus"/></svg>Add Repository…</span>
         <span class="rb-foot-r">
-          <button type="button" class="rb-pause" data-action="silence" title="Silence notifications" aria-label="Silence notifications" aria-pressed="false">
-            <svg class="rb-bell-on" viewBox="0 0 24 24" aria-hidden="true"><use href="#glyph-bell"/></svg>
-            <svg class="rb-bell-off" viewBox="0 0 24 24" aria-hidden="true"><use href="#glyph-bell-off"/></svg>
-          </button>
-          <button type="button" class="rb-pause" data-action="pause" title="Pause checks" aria-label="Pause checks" aria-pressed="false">
-            <svg class="rb-pause-bars" viewBox="0 0 24 24" aria-hidden="true"><use href="#glyph-pause"/></svg>
-            <svg class="rb-pause-play" viewBox="0 0 24 24" aria-hidden="true"><use href="#glyph-play"/></svg>
-          </button>
+          <a class="rb-foot-link" href="#settings-shot" title="Settings" aria-label="See the Settings window">Settings</a>
           <span class="rb-quit">Quit</span>
         </span>
       </div>

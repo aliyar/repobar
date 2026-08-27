@@ -420,22 +420,15 @@ html:not(.js) #rb-trigger { pointer-events: none; }
 @keyframes rb-tick { to { transform: rotate(360deg); } }
 
 .rb-foot-r { display: flex; align-items: center; gap: 10px; }
-.rb-pause {
-  display: grid; place-items: center;
-  width: 20px; height: 20px; padding: 0;
-  border: 0; border-radius: 50%; background: none;
-  color: var(--rb-text-2); cursor: pointer;
-}
-.rb-pause svg { width: 16px; height: 16px; }
-.rb-pause .rb-pause-play, .rb-pause .rb-bell-off { display: none; }
-.rb-pop.is-silenced .rb-pause .rb-bell-on { display: none; }
-.rb-pop.is-silenced .rb-pause .rb-bell-off { display: block; }
-.rb-pause:hover { color: var(--rb-text); }
-.rb-pause:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
-.rb-pop.is-paused .rb-pause .rb-pause-bars { display: none; }
-.rb-pop.is-paused .rb-pause .rb-pause-play { display: block; }
+.rb-icon .rb-pause-play, .rb-icon .rb-bell-off { display: none; }
+.rb-pop.is-silenced .rb-icon .rb-bell-on { display: none; }
+.rb-pop.is-silenced .rb-icon .rb-bell-off { display: block; }
+.rb-pop.is-paused .rb-icon .rb-pause-bars { display: none; }
+.rb-pop.is-paused .rb-icon .rb-pause-play { display: block; }
 .rb-pop.is-paused .rb-rows { opacity: .55; }
 .rb-quit { color: var(--rb-text-2); }
+.rb-foot-link { color: var(--rb-text-2); text-decoration: none; }
+.rb-foot-link:hover { color: var(--rb-text); }
 .macbar.is-paused .menubar--real .mb-glyph,
 .macbar.is-paused .mb-dots { opacity: .45; }
 
