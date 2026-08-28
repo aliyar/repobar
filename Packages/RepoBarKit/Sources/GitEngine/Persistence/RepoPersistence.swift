@@ -30,12 +30,12 @@ public actor RepoPersistence {
     public var recordsURL: URL { directory.appendingPathComponent("repos.json") }
     public var statesURL: URL { directory.appendingPathComponent("state.json") }
 
-    public func loadRecords() -> [RepoRecord] {
-        load(RecordsFile.self, from: recordsURL)?.repos ?? []
+    public func loadRecords() async -> [RepoRecord] {
+        await load(RecordsFile.self, from: recordsURL)?.repos ?? []
     }
 
-    public func loadStates() -> [RepoID: RepoState] {
-        let raw = load(StatesFile.self, from: statesURL)?.states ?? [:]
+    public func loadStates() async -> [RepoID: RepoState] {
+        let raw = await load(StatesFile.self, from: statesURL)?.states ?? [:]
         var result: [RepoID: RepoState] = [:]
         for (key, value) in raw {
             if let id = UUID(uuidString: key) { result[id] = value }
@@ -57,19 +57,38 @@ public actor RepoPersistence {
 
     // MARK: - Private
 
-    private func load<T: Decodable>(_ type: T.Type, from url: URL) -> T? {
+    /// Reads and decodes, with one retry. Two instances of the app share these files across a
+    /// rebuild-and-relaunch, and a read that lands inside the other one's replace has failed on
+    /// bytes that decode perfectly a moment later — twice in one night on a state.json that still
+    /// decodes today. Only a file that is undecodable on the second attempt is moved aside, and a
+    /// file we merely could not *read* is left where it is: condemning one costs every
+    /// repository's seen ledger, and an unreadable file is often readable next launch.
+    private func load<T: Decodable>(_ type: T.Type, from url: URL) async -> T? {
         guard FileManager.default.fileExists(atPath: url.path) else { return nil }
-        do {
-            let data = try Data(contentsOf: url)
-            return try Self.decoder.decode(T.self, from: data)
-        } catch {
-            // Keep the broken file for inspection and start fresh.
-            let stamp = ISO8601DateFormatter().string(from: Date()).replacingOccurrences(of: ":", with: "-")
-            let corrupt = url.appendingPathExtension("corrupt-\(stamp)")
-            try? FileManager.default.moveItem(at: url, to: corrupt)
-            logger.error("could not decode \(url.lastPathComponent, privacy: .public): \(error.localizedDescription, privacy: .public); moved aside")
+        var failure: Error?
+        for attempt in 0..<2 {
+            if attempt > 0 { try? await Task.sleep(for: .milliseconds(100)) }
+            do {
+                return try Self.decoder.decode(T.self, from: Data(contentsOf: url))
+            } catch {
+                failure = error
+            }
+        }
+        guard let failure else { return nil }
+        // Not `localizedDescription`: for a DecodingError it says "The data couldn't be read
+        // because it is missing.", dropping the one thing worth having — which key, in which
+        // repository, went wrong.
+        let detail = String(describing: failure)
+        guard failure is DecodingError else {
+            logger.error("could not read \(url.lastPathComponent, privacy: .public): \(detail, privacy: .public); left in place")
             return nil
         }
+        // Keep the broken file for inspection and start fresh.
+        let stamp = ISO8601DateFormatter().string(from: Date()).replacingOccurrences(of: ":", with: "-")
+        let corrupt = url.appendingPathExtension("corrupt-\(stamp)")
+        try? FileManager.default.moveItem(at: url, to: corrupt)
+        logger.error("could not decode \(url.lastPathComponent, privacy: .public): \(detail, privacy: .public); moved aside")
+        return nil
     }
 
     private func save<T: Encodable>(_ value: T, to url: URL, pretty: Bool = true) throws {

@@ -13,17 +13,20 @@ public enum AcknowledgementRules {
     ///   - tip: current tip SHA of the watched ref.
     ///   - leftRight: `rev-list --left-right --count lastSeen...tip`, nil when git could not compute it
     ///     (object gone, i.e. history was rewritten).
-    ///   - upstreamMode: watching HEAD's upstream (as opposed to an override branch).
-    ///   - behind: HEAD-vs-tip behind count in upstream mode.
-    public static func apply(lastSeen: String, tip: String, leftRight: (left: Int, right: Int)?, upstreamMode: Bool, behind: Int?) -> Outcome {
+    ///   - behind: HEAD-vs-tip behind count, nil when HEAD has no commit to compare.
+    public static func apply(lastSeen: String, tip: String, leftRight: (left: Int, right: Int)?, behind: Int?) -> Outcome {
         guard let leftRight else {
             return Outcome(lastSeen: tip, unseen: 0, historyRewritten: true)
         }
         if leftRight.left > 0 {
             return Outcome(lastSeen: tip, unseen: 0, historyRewritten: true)
         }
-        if upstreamMode, let behind, behind == 0 {
+        if let behind, behind == 0 {
             // Everything on the watched ref is already in HEAD: the user pulled/merged → auto-acknowledge.
+            // Deliberately not restricted to upstream mode: what matters is that the commits are in
+            // HEAD, not which setting picked the ref. Watching `develop` by name while sitting on
+            // `develop` is the same situation as watching it automatically, and used to keep the dot
+            // lit after a pull because the check asked about the setting instead of the commits.
             return Outcome(lastSeen: tip, unseen: 0, historyRewritten: false)
         }
         return Outcome(lastSeen: lastSeen, unseen: leftRight.right, historyRewritten: false)

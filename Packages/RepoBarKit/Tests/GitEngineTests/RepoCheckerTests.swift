@@ -274,8 +274,34 @@ struct RepoCheckerTests {
         try await fx.push(in: b, "release")
         let second = await fx.check(record, state: first.state)
         #expect(second.snapshot.unseenCount == 1)
-        #expect(second.snapshot.incoming.count == 1)
-        #expect(second.snapshot.incoming.first?.subject == "release 2")
+        // The list is what HEAD does not have — the behind count — whichever setting chose the ref;
+        // only the commit that arrived since the last check is marked new.
+        #expect(second.snapshot.comparison?.behind == 2)
+        #expect(second.snapshot.incoming.map(\.subject) == ["release 2", "release 1"])
+        #expect(second.snapshot.incoming.filter(\.isNew).map(\.subject) == ["release 2"])
+    }
+
+    /// The pinned branch is the branch HEAD is on: pulling it is an acknowledgement, exactly as it
+    /// is when the same ref is reached automatically. Both used to stay lit until "Mark as seen".
+    @Test func pullingAPinnedBranchAcknowledgesIt() async throws {
+        let fx = try await GitFixture()
+        let remote = try await fx.makeRemote()
+        let b = try await fx.clone(remote, as: "B")
+        let a = try await fx.clone(remote, as: "A")
+        let record = try await fx.record(for: a, watch: .remoteBranch("main"))
+        let first = await fx.check(record)
+
+        try await fx.commit(in: b, file: "n.txt", content: "n", message: "new one")
+        try await fx.push(in: b, "main")
+        let lit = await fx.check(record, state: first.state)
+        #expect(lit.snapshot.unseenCount == 1)
+        #expect(lit.snapshot.incoming.map(\.subject) == ["new one"])
+
+        try await fx.sh(["merge", "--ff-only", "-q", "origin/main"], in: a)
+        let pulled = await fx.check(record, state: lit.state)
+        #expect(pulled.snapshot.unseenCount == 0, "the commits are in HEAD now")
+        #expect(pulled.state.lastSeenSHA["origin/main"] == pulled.snapshot.watchedTipSHA)
+        #expect(pulled.snapshot.incoming.isEmpty, "nothing HEAD does not have")
     }
 
     @Test func missingPathNoRemoteAndRefNotFound() async throws {

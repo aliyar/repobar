@@ -165,21 +165,25 @@ struct BackoffPolicyTests {
 @Suite("AcknowledgementRules")
 struct AcknowledgementRulesTests {
     @Test func unseenCountsRightSide() {
-        let outcome = AcknowledgementRules.apply(lastSeen: "a", tip: "b", leftRight: (0, 3), upstreamMode: true, behind: 3)
+        let outcome = AcknowledgementRules.apply(lastSeen: "a", tip: "b", leftRight: (0, 3), behind: 3)
         #expect(outcome == .init(lastSeen: "a", unseen: 3, historyRewritten: false))
     }
 
     @Test func rewrittenWhenLastSeenIsNotAncestorOrUnknown() {
-        #expect(AcknowledgementRules.apply(lastSeen: "a", tip: "b", leftRight: (1, 2), upstreamMode: true, behind: 2).historyRewritten)
-        let missing = AcknowledgementRules.apply(lastSeen: "a", tip: "b", leftRight: nil, upstreamMode: false, behind: nil)
+        #expect(AcknowledgementRules.apply(lastSeen: "a", tip: "b", leftRight: (1, 2), behind: 2).historyRewritten)
+        let missing = AcknowledgementRules.apply(lastSeen: "a", tip: "b", leftRight: nil, behind: nil)
         #expect(missing == .init(lastSeen: "b", unseen: 0, historyRewritten: true))
     }
 
     @Test func pulledBranchAutoAcknowledges() {
-        let outcome = AcknowledgementRules.apply(lastSeen: "a", tip: "b", leftRight: (0, 2), upstreamMode: true, behind: 0)
+        let outcome = AcknowledgementRules.apply(lastSeen: "a", tip: "b", leftRight: (0, 2), behind: 0)
         #expect(outcome == .init(lastSeen: "b", unseen: 0, historyRewritten: false))
-        let override = AcknowledgementRules.apply(lastSeen: "a", tip: "b", leftRight: (0, 2), upstreamMode: false, behind: 0)
-        #expect(override.unseen == 2, "override mode ignores HEAD")
+        // A branch pinned by name is acknowledged on the same terms: HEAD having the commits is
+        // what makes them seen, not which setting chose the ref.
+        let behind = AcknowledgementRules.apply(lastSeen: "a", tip: "b", leftRight: (0, 2), behind: 2)
+        #expect(behind.unseen == 2)
+        let noHead = AcknowledgementRules.apply(lastSeen: "a", tip: "b", leftRight: (0, 2), behind: nil)
+        #expect(noHead.unseen == 2, "nothing to compare against: the count stands")
     }
 
     @Test func initialAndNotify() {
@@ -275,6 +279,24 @@ struct RepoPersistenceTests {
         let files = try FileManager.default.contentsOfDirectory(atPath: dir.path)
         #expect(files.contains { $0.hasPrefix("repos.json.corrupt-") })
         #expect(!files.contains("repos.json"))
+    }
+
+    /// A file we could not read is not a file that is broken. Condemning one costs every
+    /// repository's seen ledger, and it happened twice in one night to a state.json that decodes
+    /// cleanly — so only a decoding failure moves a file aside.
+    @Test func anUnreadableFileIsLeftInPlace() async throws {
+        let dir = tempDir()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        let persistence = RepoPersistence(directory: dir)
+        let url = await persistence.recordsURL
+        try Data("{}".utf8).write(to: url)
+        try FileManager.default.setAttributes([.posixPermissions: 0], ofItemAtPath: url.path)
+        defer { try? FileManager.default.setAttributes([.posixPermissions: 0o644], ofItemAtPath: url.path) }
+
+        #expect(await persistence.loadRecords().isEmpty)
+        let remaining = try FileManager.default.contentsOfDirectory(atPath: dir.path)
+        #expect(remaining == ["repos.json"], "no corrupt- copy: the file may well read next launch")
     }
 
     /// One unknown enum case must not cost the whole file: RepoPersistence answers a decoding

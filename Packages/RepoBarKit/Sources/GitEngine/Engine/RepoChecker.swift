@@ -229,15 +229,18 @@ public struct RepoChecker: Sendable {
             var leftRight: (left: Int, right: Int)?
             let lrOut = try await git.output(["rev-list", "--left-right", "--count", "\(lastSeen)...\(tipSHA)", "--"], in: repo)
             if lrOut.exitCode == 0 { leftRight = try? RevListParser.parseLeftRightCount(lrOut.stdoutText) }
-            let ack = AcknowledgementRules.apply(lastSeen: lastSeen, tip: tipSHA, leftRight: leftRight, upstreamMode: upstreamMode, behind: snapshot.comparison?.behind)
+            let ack = AcknowledgementRules.apply(lastSeen: lastSeen, tip: tipSHA, leftRight: leftRight, behind: snapshot.comparison?.behind)
             state.lastSeenSHA[key] = ack.lastSeen
             snapshot.unseenCount = ack.unseen
             snapshot.historyRewritten = ack.historyRewritten
             lastSeen = ack.lastSeen
 
             // 8. Incoming commits
+            // `headSHA` whatever picked the watched ref: the list is "commits HEAD does not have",
+            // which is the same question — and the same number as the row's behind count — whether
+            // the ref came from the upstream or from a branch the user pinned by name.
             snapshot.incoming = try await incomingCommits(
-                in: repo, tip: tipSHA, headSHA: upstreamMode ? headSHA : nil,
+                in: repo, tip: tipSHA, headSHA: headSHA,
                 lastSeen: lastSeen, unseen: ack.unseen, rewritten: ack.historyRewritten, limit: options.maxIncoming
             )
         } catch let error as GitError {
